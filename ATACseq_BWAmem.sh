@@ -96,13 +96,19 @@ for i in *_1.fastq*
     xargs samtools view -bhu -f 2 -F 2304 -q 30 -@ 3 -o ${BASENAME}_fi.bam ${BASENAME}_raw.bam
     samtools index -@ 3 ${BASENAME}_fi.bam
     samtools flagstat -@ 3 ${BASENAME}_fi.bam > ${BASENAME}_fi.txt
-    
+  
+  ###################################################################################################
+  ###################################################################################################
+  
   # remove duplicates:
   echo '=> Deduplication:' $BASENAME
   sambamba markdup -r -t 4 ${BASENAME}_fi.bam ${BASENAME}_rmdup.bam
   samtools flagstat -@ 3 ${BASENAME}_rmdup.bam > ${BASENAME}_rmdup.txt
   echo ''
   done
+  
+  ###################################################################################################
+  ###################################################################################################
   
   ## Browser tracks:
   echo '=> Bigwigs:'
