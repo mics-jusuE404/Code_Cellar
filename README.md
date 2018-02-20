@@ -1,4 +1,3 @@
 # Bash_Bioinformatics
-Bash scripts for common bioinformatic tasks
 
-Just a collection of scripts for everyday use
+Just a collection of scripts and little helpers for everyday use
