@@ -27,15 +27,15 @@ for i in *.bam
   ## Align with bowtie2 and sort BAM file:
   echo '[MAIN]: Alignment & Sorting'
   bowtie2 -x ${BOWTIE2_IDX} -U ${BASENAME}-trimmed.fastq --quiet --very-sensitive -p 16 | \
-  sambamba view -S -f bam -l 0 -t 2 /dev/stdin | \
-  sambamba sort -l 9 -t 16 --tmpdir=./ -t 6 -m 20G -o ${BASENAME}_raw.bam /dev/stdin
-  sambamba flagstat -t 6 ${BASENAME}_raw.bam > ${BASENAME}_raw.flagstat
+    sambamba view -S -f bam -l 0 -t 2 /dev/stdin | \
+    sambamba sort -l 9 -t 16 --tmpdir=./ -t 6 -m 20G -o ${BASENAME}_raw.bam /dev/stdin
+    sambamba flagstat -t 6 ${BASENAME}_raw.bam > ${BASENAME}_raw.flagstat
   rm ${BASENAME}-trimmed.fastq
   
   ## Filter out unmapped reads and MAPQ below 30, kick out duplicates:
   echo '[MAIN]: Quality Filter & Rmdup'
   samtools view -bhu -f 0 -q 30 -@ 2 ${BASENAME}_raw.bam | \
-  samtools rmdup -s - ${BASENAME}_rmdup.bam 
+    samtools rmdup -s - ${BASENAME}_rmdup.bam 
   sambamba index -t 6 ${BASENAME}_rmdup.bam
   sambamba flagstat -t 6 ${BASENAME}_rmdup.bam > ${BASENAME}_rmdup.flagstat
   
