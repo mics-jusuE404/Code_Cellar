@@ -14,4 +14,4 @@ if [[ ! -e ${1}.bai ]];
 mtReads=$(samtools idxstats $1 | grep 'chrM' | cut -f 3)
 totalReads=$(samtools idxstats $1 | awk '{SUM += $3} END {print SUM}')
 
-echo $(bc <<< "scale=2;100*$mtReads/$totalReads")
+echo '==> mtDNA Content:' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%'
