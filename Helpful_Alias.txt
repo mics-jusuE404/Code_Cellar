@@ -1,0 +1,4 @@
+#### A couple of alias commands that speed up or facilitate some things:
+
+## Rsync with optimized parameters for maximum up-and download speed:
+alias do.rsync='rsync -axv --numeric-ids --progress -e "ssh -T -o Compression=no -x"'
