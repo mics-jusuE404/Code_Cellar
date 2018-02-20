@@ -6,4 +6,4 @@
 
 samtools view -h $1 | \
   mawk -v LEN=$2 '{if ($9 <= LEN && $9 >= -(LEN) && $9 != 0 || $1 ~ /^@/) print $0}' | \
-  samtools view -bh -o ${1}_isize.bam -
+  samtools view -bh -o ${1%.bam}_isize.bam -
