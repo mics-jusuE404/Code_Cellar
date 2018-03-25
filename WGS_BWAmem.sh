@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## WGS alignment pipeline 03/18 using BWA mem:
+## Script tested on Intel Xeon Nodes with 32 and 64 cores and > 100GB RAM.
 
 ######################################################################################################
 ######################################################################################################
@@ -72,10 +73,7 @@ $BWA mem -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM' -v 2 -t 24 ${BWA_HG3
   $SAMBLASTER --addMateTags --ignoreUnmated -e -d ${BASENAME}_discordant.sam -s ${BASENAME}_splitters.sam -u ${BASENAME}_unmapped.fastq | \
   $SAMBAMBA view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
   $SAMBAMBA sort -m 30G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_SortedRmdup.bam /dev/stdin
-  #$SAMTOOLS markdup -S -s -T ./${BASENAME}_MarkdupTMP -O SAM -@ 6 - - | \
-  #$SAMBLASTER --ignoreUnmated -a -e -d ${BASENAME}_discordant.sam -s ${BASENAME}_splitters.sam -u ${BASENAME}_unmapped.fastq | \
-  #$SAMBAMBA view -f bam -S -l 6 -o ${BASENAME}_SortedMarkdup.bam /dev/stdin &&
-
+  
 ######################################################################################################
 ######################################################################################################
 
