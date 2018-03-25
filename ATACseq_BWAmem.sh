@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#### Generic ATAC-seq pipeline for low-level processing from fastq to filtered BAM files using BWA mem for alignment
+#### Standard ATAC-seq pipeline for low-level processing from fastq to filtered BAM files using BWA mem for alignment
 #### Written by Alexander Toenges (a.toenges@uni-muenster.de) 2017
 #### Assumes to be in same dir as the fastq files and bwa, samtools, sambamba , GNU parallel and bamCoverage (deeptools) in PATH:
 #### ...and yes the filtering after the alignment is probably fartoo bulky, but I prefer to feed BAMs into MACS for peak calling
