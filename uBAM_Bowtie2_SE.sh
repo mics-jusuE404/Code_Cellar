@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Simple generic alignment and filtering pipeline for standard Illumina single-end reads, e.g. ChIP-seq,
+## Simple alignment and filtering pipeline for standard Illumina single-end reads, e.g. ChIP-seq,
 ## given that data are provided as uBAM file.
 ## Requires skewer, samtools, sambamba and bowtie2 in PATH
 ## Requires that the bowtie2 index files are provided below as BOWTIE2_IDX
