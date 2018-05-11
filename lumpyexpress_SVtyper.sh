@@ -82,7 +82,7 @@ if [[ $2 == "single" ]]
     done
 
   ##: Lumpyexpress default mode with probability curve output for use with svtyper
-  echo '[MAIN]: Running lumpyexpress/SVtyper on' $BASENAME 'tumor/normal pair'
+  echo '[MAIN]: Running lumpyexpress/SVtyper on' $BASENAME 'in single mode'
   $LUMPYEXP -B ${BASENAME}_SortedRmdup.bam -D ${BASENAME}_discordant.bam -S ${BASENAME}_splitter.bam -P | \
     $SVTYPER -n 10000000 --bam ${BASENAME}_SortedRmdup.bam --split_bam ${BASENAME}_splitter.bam -o ${BASENAME}_SV.vcf
 fi    
