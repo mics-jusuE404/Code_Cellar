@@ -45,7 +45,7 @@ if [[ $2 == "paired" ]]
   if [[ ! -e ${BASENAME}-n_discordant.bam ]]; then echo '[ERROR]:' ${BASENAME}-n_discordant.bam 'does not seem to exist -- exiting' && exit 1; fi
 
   ##: Indices:
-  for i in ${BASENAME}-*.bam
+  for i in ${BASENAME}*.bam
     do
       if [[ ! -e ${i}.bai ]]; then echo $i '[MAIN]:' 'not indexed -- indexing now:' &&  $SAMBAMBA index -t 16 $i; fi
     done
@@ -73,7 +73,7 @@ if [[ $2 == "single" ]]
   if [[ ! -e ${BASENAME}_discordant.bam ]]; then echo '[ERROR]:' ${BASENAME}_discordant.bam 'does not seem to exist -- exiting' && exit 1; fi
 
   ##: Indices:
-  for i in ${BASENAME}-*.bam
+  for i in ${BASENAME}*.bam
     do
       if [[ ! -e ${i}.bai ]]; then echo $i '[MAIN]:' 'not indexed -- indexing now:' &&  $SAMBAMBA index -t 16 $i; fi
     done
