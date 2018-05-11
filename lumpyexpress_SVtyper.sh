@@ -6,7 +6,10 @@
 ##: Assumes that t/n-pairs are labelled ${BASENAME}-(t/n)_SortedRmdup.bam,
 ##: splitter and discordants are like ${BASENAME}-(t/n)_discordant.bam & ${BASENAME}-(t/n)_splitter.bam,
 ##: all BAMs are indexed as *.bam.bai
-##: USAGE: ./lumpyexpress_SVtyper.sh Basename <single/paired>
+##: USAGE: ./lumpyexpress_SVtyper.sh Basename <single/paired>, e.g.:
+## ./lumpyexpress_SVtyper.sh Sample1 paired
+
+##: Written by Alexander Toenges (a.toenges@uni-muenster.de) version 05/2018
 ##########################################################################################################################################################################################
 ##########################################################################################################################################################################################
 
