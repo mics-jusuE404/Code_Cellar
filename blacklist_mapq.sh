@@ -27,6 +27,6 @@ echo '[INFO]: Blacklisting all bases with MAPQ=0 fraction above' $2 '--- output 
 paste \
   <(sambamba depth base -t 4 --min-coverage=0 -F 'mapping_quality == 0' --regions=chr1:1-1000 tmp.bam | cut -f1,2,3) \
   <(sambamba depth base -t 4 --min-coverage=0 -F 'mapping_quality > 0' --regions=chr1:1-1000 tmp.bam | cut -f1,2,3) | \
-  awk -v FRAC="$2" 'NR>1, OFS="\t" {if (($3+1)/($6+1) > FRAC) print $1, $2, $2+1}' | \
+  awk -v FRAC="$2" 'NR>1, OFS="\t" {if (($3+1)/($6+1) >= FRAC) print $1, $2, $2+1}' | \
   bedtools merge -i - \
   > ${1%.bam}_mapqBL.bed
