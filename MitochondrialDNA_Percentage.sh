@@ -3,6 +3,11 @@
 #### Calculate percentage of reads mapped to mitochondrial genome (mtDNA) using SAMtools idxstats
 #### Can be useful for ATAC-seq data. Requires an indexed BAM file:
 
+if [[ $# -eq 0 ]] ; then
+  echo '[ERROR]: No input file given!'
+  exit 1
+fi
+
 ## Check if index is present. If not, create it:
 if [[ ! -e ${1}.bai ]];
   then
