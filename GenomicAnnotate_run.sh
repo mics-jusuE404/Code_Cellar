@@ -5,6 +5,12 @@
 ## Output is a TSV with the genomic position from the BED, the overlapping features and its corresponding genes, and the distance to the two closest gene
 ## USAGE: ./GenomicAnnotate_run.sh in.bed basename_gff
 
+## EXAMPLE, when using chr11:47361739-47362018 as input with the gencode.v27 (hg38, human) annotations:
+## \ chr	start	end	overlapping_feature	overlapping_gene	closest_gene_name	distance
+## \ chr11	47361739	47362018	intron	SPI1	MYBPC3	9038
+## \ chr11	47361739	47362018	intron	SPI1	SPI1	16558
+
+
 BEDFILE=$1
 GFF_BASENAME=$2
 
