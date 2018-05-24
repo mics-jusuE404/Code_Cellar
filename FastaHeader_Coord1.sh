@@ -3,6 +3,7 @@
 ## Takes a fasta file, created with BEDtools getfasta from a BED file (so header has 0-based coords,
 ## and outputs the same file with start coordinate + 1 to be compatible with FIMO --parse-genomic-coord,
 ## which assumes 1-based coordinates in the header
+## inspired by "https://www.biostars.org/p/259902/"
 
 if [[ $# -eq 0 ]] ; then
     echo '[ERROR]: No input file!'
