@@ -66,8 +66,7 @@ for i in *_1.fastq*
   # Filtering and sorting:
   # Remove: all chromosomes that are not chr1-22,X (so M, Y, all random and U)
   echo '=> Filtering:' $BASENAME
-  KEEPCHR='chr1\|chr2\|chr3\|chr4\|chr5\|chr6\|chr7\|chr8\|chr9\|chr10\|chr11\|chr12\|chr13\|chr14\|chr15\|chr16\|chr17\|chr18\|chr19\|chr20\|chr21\|chr22\|chrX'
-                         
+                        
   samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -v 'chrM' | \
     xargs samtools view -bh -f 2 -F 2304 -q 30 -@ 3 -o ${BASENAME}_fi.bam ${BASENAME}_raw.bam
     sambamba index -t 8 ${BASENAME}_fi.bam
