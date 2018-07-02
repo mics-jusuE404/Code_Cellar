@@ -16,6 +16,7 @@
 LUMPYEXP="$HOME/software/lumpy-sv-v0.2.13/bin/lumpyexpress"
 SAMBAMBA="$HOME/software/sambamba"
 SVTYPER="$HOME/software/svtyper-0.0.4/svtyper"
+SNPEFF="java -jar $HOME/software/SnpEff/SnpSift.jar"
 
 ##########################################################################################################################################################################################
 ##########################################################################################################################################################################################
@@ -57,6 +58,10 @@ if [[ $2 == "paired" ]]
   echo '[MAIN]: Running lumpyexpress/SVtyper on' $BASENAME 'tumor/normal pair'
   $LUMPYEXP -B ${BASENAME}-t_SortedRmdup.bam,${BASENAME}-n_SortedRmdup.bam -D ${BASENAME}-t_discordant.bam,${BASENAME}-n_discordant.bam -S ${BASENAME}-t_splitter.bam,${BASENAME}-n_splitter.bam -P -o ${BASENAME}_SVraw.vcf
   $SVTYPER -n 10000000 --bam ${BASENAME}-t_SortedRmdup.bam,${BASENAME}-n_SortedRmdup.bam > ${BASENAME}_SVgt.vcf
+  
+  ## Get somatic variants by selecting entries that have evidence in tumor but not in normal:
+  $SNPEFF --file ${BASENAME}_SVgt.vcf "( isVariant( GEN[0] ) && ( GEN[1].AO == 0 ) )" | \
+    mawk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > ${BASENAME}_SVgt_somatic.vcf
 fi
 
 ##########################################################################################################################################################################################
