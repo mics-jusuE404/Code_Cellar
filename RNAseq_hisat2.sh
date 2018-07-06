@@ -11,12 +11,6 @@ echo '[INFO]: Started on date:' && date && echo ''
 
 BASENAME=$1
 
-## Executables:
-SKEWER=
-HISAT2=
-SAMBAMBA=
-FEATURECOUNTS=
-
 ## HISAT2 index, splice-site file and genome GTF:
 HISAT2_IDX=
 SPLICE_FILE=
@@ -39,7 +33,7 @@ if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_1.fastq.gz ]]; then 
 if [[ ! -d fastq_trimmed ]]; then mkdir fastq_trimmed; fi
 
 echo '[MAIN]: Adapter/Quality trim for sample' $1
-$SKEWER -m pe -n --quiet -q 30 -Q 30 -t 8 \
+skewer -m pe -n --quiet -q 30 -Q 30 -t 8 \
    -o ./fastq_trimmed/${1} ${1}_1.fastq.gz ${1}_2.fastq.gz
 
 ################################################################################################################################################
@@ -52,9 +46,10 @@ if [[ ! -d bam_sorted ]]; then mkdir bam_sorted; fi
 
 ## Align with HISAT2 followed by sorting and indexing with Sambamba:
 echo '[MAIN]: HISAT2 for sample' $1
-$HISAT2 -p 32 -X 1000 --known-splicesite-infile $SPLICE_FILE --summary-file ${1}_hisat2_report.log -x $HISAT2_IDX -1 ${1}-trimmed-pair1.fastq -2 ${1}-trimmed-pair2.fastq | \
-  $SAMBAMBA view -S -f bam -l 0 -p -t 4 /dev/stdin | \
-  $SAMBAMBA sort -m 20G -l 5 -t 32 -o ./bam_sorted/${1}_sorted.bam /dev/stdin && rm ${1}-trimmed*.fastq
+hisat2 -p 32 -X 1000 --known-splicesite-infile $SPLICE_FILE --summary-file ${1}_hisat2_report.log -x $HISAT2_IDX -1 ${1}-trimmed-pair1.fastq -2 ${1}-trimmed-pair2.fastq | \
+  samblaster | \
+  sambamba view -S -f bam -l 0 -p -t 4 /dev/stdin | \
+  sambamba sort -m 20G -l 5 -t 32 -o ./bam_sorted/${1}_sorted.bam /dev/stdin && rm ${1}-trimmed*.fastq
   
 ################################################################################################################################################
 ################################################################################################################################################
@@ -69,7 +64,7 @@ echo '[MAIN]: featureCounts for sample' $1 'on' $GTF
 # -T = set number of threads
 # -P  = only consider pairs with ISIZE defined by -d & -D, default 50-600bp
 # -o  = output file
-$FEATURECOUNTS -a $GTF -F GTF -p -T 8 -P -o ${BASENAME}_countMatrix.txt ${1}_sorted.bam
+featureCounts -a $GTF -F GTF -p -T 8 -P -o ${BASENAME}_countMatrix.txt ${1}_sorted.bam
 
 ################################################################################################################################################
 ################################################################################################################################################
