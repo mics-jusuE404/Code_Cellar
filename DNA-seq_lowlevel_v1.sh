@@ -121,8 +121,9 @@ if [[ $MODE == "pe" ]]; then
 ## Flagstat and bigwig:
 ls *.bam | parallel "sambamba flagstat -t 2 {} > {.}.flagstat"
 
-## Browser Track:
-BIGWIG_GENERAL="bamCoverage -p 8 --normalizeUsingCPM --bam ${BASENAME}_sorted.bam -o ${BASENAME}_sorted_CPM.bigwig.bam -bs 1"
+## Browser Track (deeptools3.0 nor offers CPM normalization to avoid large numbers when using -bs 1 because 1bp = 0.001kb, which
+## causes the value for each bin to be multiplied by 1/0.001 so 1000. cpm ignores the bins
+BIGWIG_GENERAL="bamCoverage -p 8 --normalizeUsing CPM --bam ${BASENAME}_sorted.bam -o ${BASENAME}_sorted_CPM.bigwig.bam -bs 1"
 
 if [[ $MODE == "se" ]]; then
   $BIGWIG_GENERAL -e 300; fi 
