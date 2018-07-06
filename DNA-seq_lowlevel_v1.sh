@@ -102,7 +102,7 @@ if [[ $MODE == "pe" ]]; then
   BWA_PE="bwa mem -v 2 -t 8 ${BWA_IDX} ${BASENAME}-trimmed-pair1.fastq ${BASENAME}-trimmed-pair2.fastq"
 
   ## Trim & Align:
-  $SKEWER -t 4 $SKEWER_2 | \  
+  $SKEWER -t 4 $SKEWER_2  
     ${BWA_PE} | \
     samblaster | \
     sambamba view -S -f bam -t 1 -l 0 /dev/stdin | \
@@ -119,7 +119,7 @@ if [[ $MODE == "pe" ]]; then
 ################################################################################################################################
 
 ## Flagstat and bigwig:
-ls *.bam | parallel "sambamba flagstat -t 2 {} > {.}.flagstat"
+ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 2 {} > {.}.flagstat"
 
 ## Browser Track (deeptools3.0 nor offers CPM normalization to avoid large numbers when using -bs 1 because 1bp = 0.001kb, which
 ## causes the value for each bin to be multiplied by 1/0.001 so 1000. cpm ignores the bins
