@@ -104,7 +104,7 @@ if [[ $MODE == "pe" ]]; then
   ## Trim & Align:
   $SKEWER -t 4 $SKEWER_2  
     ${BWA_PE} | \
-    samblaster | \
+    samblaster --ignoreUnmated | \
     sambamba view -S -f bam -t 1 -l 0 /dev/stdin | \
     sambamba sort -m 5G -l 5 -t 4 --tmpdir=./ -o ${BASENAME}_raw.bam /dev/stdin
 
