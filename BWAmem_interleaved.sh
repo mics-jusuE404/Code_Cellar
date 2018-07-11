@@ -17,7 +17,7 @@ PAIRED_2_INTERLEAVED="seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.g
 BWAMEM_INTERLEAVED="bwa mem -v 2 -p ${BWA_IDX}"  
   
 ${PAIRED_2_INTERLEAVED} | \
-  cutadapt -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
+  cutadapt -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 --quality-cutoff=30 - | \
   ${BWAMEM_INTERLEAVED} /dev/stdin | \
   samtools fixmate -m - - | \
   samblaster --ignoreUnmated --addMateTags | \
