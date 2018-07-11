@@ -13,8 +13,8 @@ NFORK=$2
 
 if [[ ! -e All_20180418.vcf.gz ]]; then
   echo '[INFO]: Downloading dbSNP151 VCF file and its index'
-  wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms//human_9606_b151_GRCh38p7/VCF/All_20180418.vcf.gz
-  wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms//human_9606_b151_GRCh38p7/VCF/All_20180418.vcf.gz.tbi
+  wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms//human_9606_b151_GRCh38p7/VCF/All_20180418.vcf.gz .
+  wget ftp://ftp.ncbi.nlm.nih.gov/snp/organisms//human_9606_b151_GRCh38p7/VCF/All_20180418.vcf.gz.tbi .
   fi
   
 ## Annotate VCF:
