@@ -19,8 +19,6 @@ SCALE_FACTOR=$(bc <<< "scale=8;1000000/$(samtools idxstats $1 | awk '{SUM+=$3} E
 
 ## 3. Normalize:
 mawk -v SF=${SCALE_FACTOR} 'OFS="\t" {print $1, $2, $3, $4*SF}' <(bgzip -c -d -@ 8 ${BAM%.bam}.per-base.bed.gz) | \
-  sort -k1,1 -k2,2n --parallel=8 > ${BAM%.bam}_norm.bedGraph.tmp
-
-## 4. to bigwig (cannot read from stdin so far:)
-bedGraphToBigWig ${BAM%.bam}_norm.bedGraph.tmp $CHROMSIZES ${BAM%.bam}_CPM.bigwig && \
-  rm ${BAM%.bam}_norm.bedGraph.tmp ${BAM%.bam}.per-base* ${BAM%.bam}*mosdepth* 
+  sort -k1,1 -k2,2n --parallel=8 | \
+  wigToBigWig /dev/stdin $CHROMSIZES ${BAM%.bam}_CPM.bigwig && \
+  rm ${BAM%.bam}.per-base* ${BAM%.bam}*mosdepth* 
