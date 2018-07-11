@@ -2,7 +2,7 @@
 
 ## Saw recently that cutadapt (unlike skewer) can accept and write interleaved fq and pipe that to BWA,
 ## probably saving time and disk space when files are large.
-## First draft:
+## Note: When using multithreaded cutadapt, one must use the python3 version!
 
 
 ## add option for optional single-end input
