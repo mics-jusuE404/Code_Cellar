@@ -25,7 +25,7 @@ TUMOR=$1
 NORMAL=$2
 BASENAME=$3
 REGION=$4
-PWD=$5
+PWD="/scratch/tmp/a_toen03/WGS/Variants"
 ####
 VARSCAN="java -jar $HOME/software_2c/VarScan.v2.4.3.jar"
 HG38="/scratch/tmp/a_toen03/Genomes/hg38/hg38_noALT_withDecoy.fa"
@@ -33,7 +33,7 @@ HG38="/scratch/tmp/a_toen03/Genomes/hg38/hg38_noALT_withDecoy.fa"
 #####################################################################################################
 
 echo ''
-echo '[INFO]: Pipeline for ' $BASENAME 'started' && date && echo ''
+echo '[INFO]: Pipeline for' $BASENAME 'started' && date && echo ''
 
 #####################################################################################################
 
@@ -109,35 +109,17 @@ mv ${BASENAME}*Germline* ./Germline
 echo ''
 echo '[MAIN]: Preparing region list for bam-readcount:' && echo ''
 egrep -hv "^#" ${BASENAME}*.hc.vcf | \
-  mawk 'OFS="\t" {print $1, $2-1, $2+1}' | \
+  mawk 'OFS="\t" {print $1, $2-10, $2+10}' | \
   sort -k1,1 -k2,2n --parallel=8 | \
   bedtools merge -i - > ${BASENAME}_bamRC_template.bed
 
 ## Now get data from bam-readcount for both the tumor and normal file:
 echo '[MAIN]: Getting data from bam-readcount:' && echo ''
-bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 ${PWD}/$TUMOR | \
+bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 /scratch/tmp/a_toen03/WGS/Variants/$TUMOR | \
   bgzip -@ 6 > ${BASENAME}-t.bamRC.gz
-bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 ${PWD}/$NORMAL | \
+bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 /scratch/tmp/a_toen03/WGS/Variants/${NORMAL} | \
   bgzip -@ 6 > ${BASENAME}-n.bamRC.gz
 echo ''
-
-## Check if the files came out correctly:
-if [[ ! -e ${BASENAME}-t.bamRC.gz ]]
-  then
-  echo '[ERROR]: bam-readcount output for' $TUMOR 'is not present, check error message of bam-RC!'
-  
-  if [[ ! -e ${BASENAME}-n.bamRC ]]
-    then
-    echo '[ERROR]: bam-readcount output for' $NORMAL 'is ALSO not present, check error message of bam-RC!'
-    exit 1
-    fi
-  else
-    if [[ ! -e ${BASENAME}-n.bamRC ]]
-      then
-      echo '[ERROR]: bam-readcount output for' ${BASENAME}-n 'is ALSO not present, check error message of bam-RC!'
-      exit 1
-      fi
-  fi    
 
 ## Check if files are not empty:
 if [[ $(bgzip -c -d ${BASENAME}-t.bamRC.gz | head -n 20 | grep -c 'chr' README.txt) == 0 ]]
