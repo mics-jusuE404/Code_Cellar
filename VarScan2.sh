@@ -7,7 +7,9 @@ export LC_ALL=en_US.UTF-8
 #####################################################################################################
 ####
 #### Bash script for variant calling with samtools mpileup | VarScan2.
-#### Script only assumes that a pair of tumor-normal BAM files is present 
+#### Script assumes that a pair of tumor-normal BAM files is present in the dir where the script is.
+#### Also assumes samtools, sambamba and bam-readcount in PATH, and path to varscan.jar specified
+#### in this script as VARSCAN="java -jar /path/to/varscan.jar"
 #### Raw variants are called with VarScan2 somatic, then split into somatic and germis by
 #### processSomatic, selected for high-confidence variants and filtered for junk calls
 #### with fpfilter. For fpfilter, bam-readcount is used to extract the necessary info
@@ -30,7 +32,7 @@ HG38="/scratch/tmp/a_toen03/Genomes/hg38/hg38_noALT_withDecoy.fa"
 #####################################################################################################
 
 echo ''
-echo '[Info]: Pipeline for ' $BASENAME 'started' && date && echo ''
+echo '[INFO]: Pipeline for ' $BASENAME 'started' && date && echo ''
 
 #####################################################################################################
 
@@ -44,15 +46,15 @@ cd $PWD/VCF
 
 #####################################################################################################
 
-if [[ ! -f $1 ]]; then; echo '[ERROR]: Tumor BAM is missing - exiting' && exit 1; fi
-if [[ ! -f ${1}.bai ]]; then
+if [[ ! -e $TUMOR ]]; then echo '[ERROR]: Tumor BAM is missing - exiting' && exit 1; fi
+if [[ ! -e ${TUMOR}.bai ]]; then
   echo '[ERROR]: Tumor BAM is not indexed - indexing now:'
   sambamba index -t 16 $1
   fi
 
-if [[ ! -f $2 ]]; then; echo '[ERROR]: Normal BAM is missing - exiting' && exit 1; fi
-if [[ ! -f ${2}.bai ]]; then
-  echo '[ERROR]: Tumor BAM is not indexed - indexing now:'
+if [[ ! -e $NORMAL ]]; then echo '[ERROR]: Normal BAM is missing - exiting' && exit 1; fi
+if [[ ! -e ${NORMAL}.bai ]]; then
+  echo '[ERROR]: Normal BAM is not indexed - indexing now:'
   sambamba index -t 16 $2
   fi
 
@@ -117,7 +119,7 @@ bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 
 echo ''
 
 ## Check if the files came out correctly:
-if [[ ! -f ${BASENAME}-t.bamRC.gz ]]
+if [[ ! -e ${BASENAME}-t.bamRC.gz ]]
   then
   echo '[ERROR]: bam-readcount output for' $TUMOR 'is not present, check error message of bam-RC!'
   
