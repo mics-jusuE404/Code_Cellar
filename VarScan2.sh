@@ -25,6 +25,7 @@ TUMOR=$1
 NORMAL=$2
 BASENAME=$3
 REGION=$4
+PWD=$5
 ####
 VARSCAN="java -jar $HOME/software_2c/VarScan.v2.4.3.jar"
 HG38="/scratch/tmp/a_toen03/Genomes/hg38/hg38_noALT_withDecoy.fa"
@@ -39,21 +40,19 @@ echo '[INFO]: Pipeline for ' $BASENAME 'started' && date && echo ''
 ## Mpileup from samtools piped into VarScan:
 
 ## Write output files into a directory termed VCF:
-if [[ ! -d ./VCF ]]; then mkdir VCF; fi
 
-PWD=$(pwd) 
-cd $PWD/VCF
+if [[ ! -d ./VCF ]]; then mkdir VCF; fi
 
 #####################################################################################################
 
-if [[ ! -e $TUMOR ]]; then echo '[ERROR]: Tumor BAM is missing - exiting' && exit 1; fi
-if [[ ! -e ${TUMOR}.bai ]]; then
+if [[ ! -e $PWD/$TUMOR ]]; then echo '[ERROR]: Tumor BAM is missing - exiting' && exit 1; fi
+if [[ ! -e $PWD/${TUMOR}.bai ]]; then
   echo '[ERROR]: Tumor BAM is not indexed - indexing now:'
   sambamba index -t 16 $1
   fi
 
-if [[ ! -e $NORMAL ]]; then echo '[ERROR]: Normal BAM is missing - exiting' && exit 1; fi
-if [[ ! -e ${NORMAL}.bai ]]; then
+if [[ ! -e $PWD/$NORMAL ]]; then echo '[ERROR]: Normal BAM is missing - exiting' && exit 1; fi
+if [[ ! -e $PWD/${NORMAL}.bai ]]; then
   echo '[ERROR]: Normal BAM is not indexed - indexing now:'
   sambamba index -t 16 $2
   fi
@@ -65,7 +64,9 @@ echo '[MAIN]: VarScan mpileup/somatic:'
 samtools mpileup -q 20 -Q 25 -B -d 1000 -f $HG38 \
   <(samtools view -bu -@ 2 $PWD/$TUMOR $REGION) \
   <(samtools view -bu -@ 2 $PWD/$NORMAL $REGION) | \
-    $VARSCAN somatic /dev/stdin ${BASENAME} -mpileup --strand-filter 1 --output-vcf
+    $VARSCAN somatic /dev/stdin ./VCF/${BASENAME} -mpileup --strand-filter 1 --output-vcf
+
+cd ./VCF
 
 #####################################################################################################
 
@@ -82,6 +83,8 @@ cat ${BASENAME}.snp.vcf | $VARSCAN processSomatic ./processSomatic/${BASENAME}.s
 cat ${BASENAME}.indel.vcf | $VARSCAN processSomatic ./processSomatic/${BASENAME}.indel.vcf --max-normal-freq 0.01 
 
 ## Sort high-confidence variants into separate folder:
+cd ./processSomatic
+
 if [[ ! -d VCF_High_Confidence ]];
   then
   mkdir VCF_High_Confidence
@@ -112,9 +115,9 @@ egrep -hv "^#" ${BASENAME}*.hc.vcf | \
 
 ## Now get data from bam-readcount for both the tumor and normal file:
 echo '[MAIN]: Getting data from bam-readcount:' && echo ''
-bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 ${RMDUP_DIR}/$TUMOR | \
+bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 ${PWD}/$TUMOR | \
   bgzip -@ 6 > ${BASENAME}-t.bamRC.gz
-bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 ${RMDUP_DIR}/$NORMAL | \
+bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 ${PWD}/$NORMAL | \
   bgzip -@ 6 > ${BASENAME}-n.bamRC.gz
 echo ''
 
