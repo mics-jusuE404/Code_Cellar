@@ -62,8 +62,8 @@ if [[ ! -e $PWD/${NORMAL}.bai ]]; then
 ## Raw variants:
 echo '[MAIN]: VarScan mpileup/somatic:'
 samtools mpileup -q 20 -Q 25 -B -d 1000 -f $HG38 \
-  <(samtools view -bu -@ 2 $PWD/$TUMOR $REGION) \
   <(samtools view -bu -@ 2 $PWD/$NORMAL $REGION) | \
+  <(samtools view -bu -@ 2 $PWD/$TUMOR $REGION) \
     $VARSCAN somatic /dev/stdin ./VCF/${BASENAME} -mpileup --strand-filter 1 --output-vcf
 
 cd ./VCF
