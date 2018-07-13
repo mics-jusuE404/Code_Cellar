@@ -21,6 +21,7 @@ export LC_ALL=en_US.UTF-8
 ####
 #####################################################################################################
 ####
+#### Tumor and Normal are supposed to be full paths to the bam files:
 TUMOR=$1
 NORMAL=$2
 BASENAME=$3
@@ -45,14 +46,14 @@ if [[ ! -d ./VCF ]]; then mkdir VCF; fi
 
 #####################################################################################################
 
-if [[ ! -e $PWD/$TUMOR ]]; then echo '[ERROR]: Tumor BAM is missing - exiting' && exit 1; fi
-if [[ ! -e $PWD/${TUMOR}.bai ]]; then
+if [[ ! -e $TUMOR ]]; then echo '[ERROR]: Tumor BAM is missing - exiting' && exit 1; fi
+if [[ ! -e ${TUMOR}.bai ]]; then
   echo '[ERROR]: Tumor BAM is not indexed - indexing now:'
   sambamba index -t 16 $1
   fi
 
-if [[ ! -e $PWD/$NORMAL ]]; then echo '[ERROR]: Normal BAM is missing - exiting' && exit 1; fi
-if [[ ! -e $PWD/${NORMAL}.bai ]]; then
+if [[ ! -e $NORMAL ]]; then echo '[ERROR]: Normal BAM is missing - exiting' && exit 1; fi
+if [[ ! -e ${NORMAL}.bai ]]; then
   echo '[ERROR]: Normal BAM is not indexed - indexing now:'
   sambamba index -t 16 $2
   fi
@@ -62,8 +63,8 @@ if [[ ! -e $PWD/${NORMAL}.bai ]]; then
 ## Raw variants:
 echo '[MAIN]: VarScan mpileup/somatic:'
 samtools mpileup -q 20 -Q 25 -B -d 1000 -f $HG38 \
-  <(samtools view -bu -@ 2 $PWD/$NORMAL $REGION) | \
-  <(samtools view -bu -@ 2 $PWD/$TUMOR $REGION) \
+  <(samtools view -bu -@ 2 $NORMAL $REGION) | \
+  <(samtools view -bu -@ 2 $TUMOR $REGION) \
     $VARSCAN somatic /dev/stdin ./VCF/${BASENAME} -mpileup --strand-filter 1 --output-vcf
 
 cd ./VCF
@@ -115,9 +116,9 @@ egrep -hv "^#" ${BASENAME}*.hc.vcf | \
 
 ## Now get data from bam-readcount for both the tumor and normal file:
 echo '[MAIN]: Getting data from bam-readcount:' && echo ''
-bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 /scratch/tmp/a_toen03/WGS/Variants/$TUMOR | \
+bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 $TUMOR | \
   bgzip -@ 6 > ${BASENAME}-t.bamRC.gz
-bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 /scratch/tmp/a_toen03/WGS/Variants/${NORMAL} | \
+bam-readcount -f $HG38 -q 20 -b 25 -d 1000 -l ${BASENAME}_bamRC_template.bed -w 1 $NORMAL | \
   bgzip -@ 6 > ${BASENAME}-n.bamRC.gz
 echo ''
 
