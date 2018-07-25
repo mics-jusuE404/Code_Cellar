@@ -11,6 +11,15 @@
 ######################################################################################################
 
 BAM=$1
+
+######################################################################################################
+
+command -v mosdepth >/dev/null 2>&1 || { echo >&2 "[ERROR]: mosdepth is not in PATH"; exit 1; }
+command -v samtools >/dev/null 2>&1 || { echo >&2 "[ERROR]: samtools is not in PATH"; exit 1; }
+command -v mawk >/dev/null 2>&1 || { echo >&2 "[ERROR]: mawk is not in PATH"; exit 1; }
+command -v bgzip >/dev/null 2>&1 || { echo >&2 "[ERROR]: bgzip is not in PATH"; exit 1; }
+command -v bc >/dev/null 2>&1 || { echo >&2 "[ERROR]: bgzip is not in PATH"; exit 1; }
+
 ######################################################################################################
 
 ## Check bam file:
