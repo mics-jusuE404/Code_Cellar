@@ -8,10 +8,12 @@
 ####            2) *_sorted.bam = like 1) with multimappers and reads on mtDNA removed
 ####            3) *_sorted_CPM.bigwig = bigwig file from 2) normalized to CPM
 
+## Usage: ./DNA-seq_lowlevel_v1.sh BASENAME Modus
+
 ################################################################################################################################
 ################################################################################################################################
 
-BWA_IDX="scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
 
 ################################################################################################################################
 ################################################################################################################################
