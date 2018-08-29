@@ -8,7 +8,6 @@ SCALE=$(bc <<< "scale=6;1000000/$(sambamba view --num-filter=64/ -c $1)")
 samtools view -f 64 -@ 4 $1 | \
   mawk 'OFS="\t" { if ($9 > 0) {print $3, $4-1+5, $4-1+5+1 "\n" $3, $4-1+5+$9, $4-1+5+$9+1} \
     else if ($9 < 0) {print $3, $4-1-4, $4-1-4+1, "\n" $3, $4-1-4+$9, $4-1-4+$9+1}}' | \
-      bedtools genomecov -i - -bg -scale $SCALE -g chromSizes.txt | \
-        bgzip > ${1%.bam}_cutsites_cpm.bg.gz
+      bedtools genomecov -i - -bg -scale $SCALE -g chromSizes.txt > ${1%.bam}_cutsites_cpm.bg
         
-bedGraphToBigWig <(bgzip -c -d -@ 2 ${1%.bam}_cutsites_cpm.bg.gz) chromSizes.txt ${1%.bam}_cutsites_cpm.bigwig
+bedGraphToBigWig ${1%.bam}_cutsites_cpm.bg chromSizes.txt ${1%.bam}_cutsites_cpm.bigwig
