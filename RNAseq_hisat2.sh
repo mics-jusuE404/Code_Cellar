@@ -7,14 +7,13 @@
 ################################################################################################################################################
 ################################################################################################################################################
 
-echo '[INFO]: Started on date:' && date && echo ''
+echo '[INFO]' $1 'Started on date:' && date && echo ''
 
 BASENAME=$1
 
 ## HISAT2 index, splice-site file and genome GTF:
-HISAT2_IDX=
-SPLICE_FILE=
-GTF=
+HISAT2_IDX="/scratch/tmp/a_toen03/Genomes/hg38/hisat2_IDX/hg38_noALT_withDecoy"
+SPLICE_FILE="/scratch/tmp/a_toen03/Genomes/hg38/hisat2_IDX/gencode.v27.annotation_SpliceSites.txt"
 
 ## Check if fastq files are present
 if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_1.fastq.gz ]]; then echo '[ERROR]: Input files not present -- exiting'; fi
@@ -23,50 +22,30 @@ if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_1.fastq.gz ]]; then 
 ################################################################################################################################################
 
 ##: Trim adapters with skewer
-# --- Illumina's old paired-end adapters ::: -x fwd -y rev
+# --- Illumina's paired-end adapters ::: -x fwd -y rev
 # --- remove degenerated (NNNNN) reads ::: -n
 # --- trim 3' until hitting a base with qual >= 20 ::: -q 20
-# --- remove reads with mean quality below 10 ::: -Q 10
+# --- remove reads with mean quality below 20 ::: -Q 20
 # --- multithreaded ::: -t INT
 
 ## Prepare output directory:
-if [[ ! -d fastq_trimmed ]]; then mkdir fastq_trimmed; fi
-
 echo '[MAIN]: Adapter/Quality trim for sample' $1
-skewer -m pe -n --quiet -q 30 -Q 30 -t 8 \
-   -o ./fastq_trimmed/${1} ${1}_1.fastq.gz ${1}_2.fastq.gz
+skewer -m pe -n --quiet -q 20 -Q 20 -t 8 -o ${1} ${1}_1.fastq.gz ${1}_2.fastq.gz
 
 ################################################################################################################################################
 ################################################################################################################################################
-
-cd ./fastq_trimmed   
 
 ## Check for output directory:
-if [[ ! -d bam_sorted ]]; then mkdir bam_sorted; fi
+if [[ ! -d BAM ]]; then mkdir BAM; fi
 
-## Align with HISAT2 followed by sorting and indexing with Sambamba:
+## Align with HISAT2, without sorting, as mostly BAMs are only used for featureCounts quant 
+## and that requires name-sorting anyway:
 echo '[MAIN]: HISAT2 for sample' $1
 hisat2 -p 32 -X 1000 --known-splicesite-infile $SPLICE_FILE --summary-file ${1}_hisat2_report.log -x $HISAT2_IDX -1 ${1}-trimmed-pair1.fastq -2 ${1}-trimmed-pair2.fastq | \
   samblaster | \
-  sambamba view -S -f bam -l 0 -p -t 4 /dev/stdin | \
-  sambamba sort -m 20G -l 5 -t 32 -o ./bam_sorted/${1}_sorted.bam /dev/stdin && rm ${1}-trimmed*.fastq
+  sambamba view -S -f bam -l 5 -t 4 -o ./BAM/${1}_unsorted.bam /dev/stdin && rm ${1}-trimmed*.fastq
   
 ################################################################################################################################################
 ################################################################################################################################################
 
-cd ./bam_sorted
-
-echo '[MAIN]: featureCounts for sample' $1 'on' $GTF
-## Assign reads to GTF exons:
-# -a = the GTF/GFF file
-# -F = specify the format of -a 
-# -p = data are paired-end
-# -T = set number of threads
-# -P  = only consider pairs with ISIZE defined by -d & -D, default 50-600bp
-# -o  = output file
-featureCounts -a $GTF -F GTF -p -T 8 -P -o ${BASENAME}_countMatrix.txt ${1}_sorted.bam
-
-################################################################################################################################################
-################################################################################################################################################
-
-echo '[INFO]: Ended on date:' && date 
+echo '[INFO]' $1 'Ended on date:' && date 
