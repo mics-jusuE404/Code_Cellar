@@ -1,9 +1,14 @@
-#!/bin/bash
 ####################################################################################################################################
 ####################################################################################################################################
-## Alignment of paired-end data to hg38 on high-memory nodes. 6	jobs in	parallel on largesmp nodes should be possible.
+
+## Version last modified: 07.09.2018
+## Alignment of paired-end data to hg38 on high-memory nodes. 6 jobs in parallel on largesmp nodes should be possible.
 ## Using seqtk to interleave mate files, BWA mem for alignment, samblaster for dup. marking, and sambamba for sorting and indexing.
 ## Usage ./script.sh BASENAME
+
+## Run with a helper script that contains the #SBATCH parameters and :
+## ls *_1.fastq.gz | awk -F "_" '{print $1}' | parallel -j 6 "./script.sh {}"
+
 ####################################################################################################################################
 ####################################################################################################################################
 
@@ -29,7 +34,7 @@ seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
   samtools fixmate -m -@ 2 -O SAM - - | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
-  sambamba sort -m 200G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_SortedRmdup.bam /dev/stdin
+  sambamba sort -m 250G --tmpdir=./ -l 5 -t 24 -o ${BASENAME}_SortedRmdup.bam /dev/stdin  
 
 echo '[END]' $BASENAME 'on:' && date
 echo '#############################################################################################################################'
