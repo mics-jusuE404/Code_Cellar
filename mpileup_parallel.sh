@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ## Use samtools mpileup, parallelized over all primary chromosomes of a BAM file.
+## Assumes indexed BAM file.
 ## Usage: ./mpileup_paralle.sh foo.bam
 ## Output would be foo.mpileup.gz
 
