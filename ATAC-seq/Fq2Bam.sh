@@ -42,7 +42,7 @@ function Fq2Bam {
     samtools fixmate -m -@ 2 -O SAM - - | \
     samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
-    sambamba sort -m 200G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
+    sambamba sort -m 100G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
     
     samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -v 'chrM|_random|chrU|chrEBV|\*' | \
       xargs sambamba view -f bam -t 8 --num-filter=1/1028 --filter='mapping_quality > 0' \
