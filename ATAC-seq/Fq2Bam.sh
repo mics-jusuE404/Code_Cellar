@@ -3,6 +3,7 @@
 ######################################################################################################################################
 
 ## ATAC-seq - alignment of fastq files to hg38, including adapter trimming without intermediate files
+## Assumes script in same dir as fastqs, bwa - samtools - samblaster - cutadapt in PATH
 
 ######################################################################################################################################
 
@@ -19,6 +20,10 @@
 function Fq2Bam {
 
   BASENAME=$1
+  
+  if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
+    echo '[ERROR] At least one input file is missing -- exiting' && exit 1
+    fi
   
   ## Nextera adapter:
   ADAPTER1="CTGTCTCTTATACACATCT"
