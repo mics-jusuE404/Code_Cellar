@@ -8,7 +8,7 @@ BLACKLIST_HG38="/scratch/tmp/a_toen03/Genomes/hg38/Blacklists/hg38_consensusBL.b
 
 ## Call peaks:
 ls *_sorted.bam | awk -F "_sorted.bam" '{print $1}' | \
-  parallel "macs2 callpeak -t {}_sorted.bam -n {} -g hs --nomodel -f BAMPE -q 0.001 --keep-dup=all"
+  parallel "macs2 callpeak -t {}_sorted.bam -n {} -g hs --nomodel -f BAMPE -q 0.01 --keep-dup=all"
 
 ## Merge peak lists and filter against blacklist:
 ls *peaks.narrowPeak | awk -F "_rep" '{print $1}' | sort -u | \
