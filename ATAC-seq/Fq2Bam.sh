@@ -45,7 +45,7 @@ function Fq2Bam {
     sambamba sort -m 100G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
     
     samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -v 'chrM|_random|chrU|chrEBV|\*' | \
-      xargs sambamba view -f bam -t 8 --num-filter=1/1028 --filter='mapping_quality > 0' \
+      xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' \
       -o ${BASENAME}_sorted.bam ${BASENAME}_raw.bam
     
   echo '[END]' $BASENAME 'on:' && date
