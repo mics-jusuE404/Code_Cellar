@@ -4,6 +4,6 @@
 #### Usage ----- ./Filter_Bam_ISIZE.sh in.bam 1000 ------ would get pairs with ISIZE smaller 1kb
 #### Note: Script uses mawk (https://invisible-island.net/mawk/mawk.html) which is way faster than standard awk
 
-samtools view -h $1 | \
+sambamba view -f sam -h -t 4 $1 | \
   mawk -v LEN=$2 '{if ($9 <= LEN && $9 >= -(LEN) && $9 != 0 || $1 ~ /^@/) print $0}' | \
-  samtools view -bh -o ${1%.bam}_isize.bam -
+  sambamba view -f bam -h -o ${1%.bam}_isize${2}.bam -
