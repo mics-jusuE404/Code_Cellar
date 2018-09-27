@@ -26,7 +26,7 @@ function Fq2Bam {
     echo '[ERROR] Input file is missing -- exiting' && exit 1
     fi
   
-  ## Nextera adapter:
+  ## Truseq adapter:
   ADAPTER1="AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
   
   BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
@@ -40,7 +40,7 @@ function Fq2Bam {
     bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 ${BWA_IDX} /dev/stdin 2>> ${BASENAME}.log | \
     samblaster --ignoreUnmated 2>> ${BASENAME}.log 2>> ${BASENAME}.log | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
-    sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
+    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
         
     samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' 2>> ${BASENAME}.log | \
       xargs sambamba view -f bam -t 8 --num-filter=0/1284 --filter='mapping_quality > 19' 2>> ${BASENAME}.log \
@@ -55,7 +55,7 @@ function Fq2Bam {
 export -f Fq2Bam
 
 ## Alignment:
-ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | \
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
   parallel -j 4 "Fq2Bam {} && mtDNA {}"
   
 ## Bigwigs:
