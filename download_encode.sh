@@ -7,7 +7,7 @@
 grep 'fastq.gz' metadata.tsv | cut -f1 | while read p; do echo 'https://www.encodeproject.org/files/'${p}'/@@download/'${p}'.fastq.gz' >> download.txt;  done
 
 ## Download:
-cat download.txt | head -n 2 | parallel -j 6 "wget {}"
+cat download.txt | parallel -j 6 "wget {}"
 
 ## Rename fastq in the form EXPERIMENTTARGET_ACCESSION_BIOLREP.fastqgz, skipping unlisted files:
 for i in *.fastq.gz; do 
