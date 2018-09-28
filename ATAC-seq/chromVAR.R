@@ -86,7 +86,9 @@ Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome){
   filtered_counts <- filterSamples(fragment_counts, shiny = F)
   filtered_counts <- filterPeaks(fragment_counts)
   
-  ## match motifs to the input regions:
+  ## match motifs to the input regions.
+  ## As this method does (AFAIK) not correct for multi. testing, it might be clever to use FIMO
+  ## externally and feed the motif positions in manually.
   motif_ix <- matchMotifs(motifs, filtered_counts,
                                  genome = Genome)
   
