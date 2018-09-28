@@ -56,7 +56,7 @@ export -f Fq2Bam
 
 ## Alignment:
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
-  parallel -j 4 "Fq2Bam {} && mtDNA {}"
+  parallel -j 4 "Fq2Bam {}"
   
 ## Bigwigs:
 ls *_sorted.bam | parallel -j 4 "bamCoverage -e 400 --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16"
