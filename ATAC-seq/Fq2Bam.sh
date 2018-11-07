@@ -65,7 +65,7 @@ function mtDNA {
   
   if [[ ! -e ${BASENAME}_raw.bam.bai ]];
     then
-    sambamba index -t ${CORES} ${BASENAME}_raw.bam
+    sambamba index ${BASENAME}_raw.bam
     fi
     
   mtReads=$(samtools idxstats ${BASENAME}_raw.bam | grep 'chrM' | cut -f 3)
