@@ -18,7 +18,7 @@ ls *_sorted.bam | awk -F "_sorted.bam" '{print $1}' | \
 ## Intersect full dataset:
 ls *rep*_peaks.narrowPeak | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
   parallel "bedtools intersect -a {}_rep1_peaks.narrowPeak -b {}_rep2_peaks.narrowPeak | \
-  bedtools intersect -v -a - -b /scratch/tmp/a_toen03/Genomes/hg38/Blacklists/hg38_consensusBL.bed | cut -f1-3 > {}_full.bed"
+  bedtools intersect -v -a - -b ${BLACKLIST_HG38} | cut -f1-3 > {}_full.bed"
 
 ## intersect the 100bp replicates, using the overlapping coordinates and keep if they overlap with a peak of the full dataset:
 ls *_rep*_sorted_isize100_peaks.narrowPeak | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
