@@ -17,7 +17,7 @@ LOAD_RENAME () {
     fi
     
   ## Download file:
-  wget -nv $(echo "$VAR_STDIN" | cut -f37)
+  wget -q $(echo "$VAR_STDIN" | cut -f37)
     
   ## Rename:  
   mv \
