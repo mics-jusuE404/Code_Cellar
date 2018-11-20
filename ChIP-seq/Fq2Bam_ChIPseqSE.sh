@@ -62,4 +62,4 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
 ls *_sorted.bam | parallel -j 4 "bamCoverage -e 400 --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16"
 
 ## Fastqc:
-ls *.bam | parallel "fastqc {}" 
+ls *_raw.bam | parallel "fastqc {}" 
