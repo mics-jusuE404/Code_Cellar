@@ -13,8 +13,8 @@ Script to align single-end `*fastq.gz`to hg38, resulting in unfiltered BAMs `*_r
 This one goes through the files and combined all technical replicates belonging to one biological replicate into one `fastq.gz`.
 For example these two files 
 
-`FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_TechRep1_ENCFF002AVF.fastq.gz`
-`FOO_ChIP-seq_H2AFZ_BiolRep1_TechRep2_ENCFF002AYT.fastq.gz`
+<p>`FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_TechRep1_ENCFF002AVF.fastq.gz`</p>
+<p>`FOO_ChIP-seq_H2AFZ_BiolRep1_TechRep2_ENCFF002AYT.fastq.gz`</p>
 
 will become
 `FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_combined.fastq.gz`
