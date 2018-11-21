@@ -35,21 +35,10 @@ LOAD_RENAME () {
         <(echo "$VAR_STDIN" | cut -f13) \
         <(paste -d "" <(echo 'BiolRep') <(echo "$VAR_STDIN" | cut -f25)) \
         <(paste -d "" <(echo 'TechRep') <(echo "$VAR_STDIN" | cut -f26)) \
-        <(echo "$VAR_STDIN" | cut -f1))
+        <(echo "$VAR_STDIN" | cut -f1)) \
         <(echo '.fastq.gz'))
       )
 }; export -f LOAD_RENAME
-
-## Function for catting isogenic/technical replicates given they are of read length >= 36bp:
-CATTY () {
-  
-
-
-
-
-
-
-
 
 ## Run it on all metadata TSVs in $(pwd):
 for i in *_metadata.tsv
@@ -62,3 +51,4 @@ for i in *_metadata.tsv
   
 ########################################################################################################################################
 
+  
