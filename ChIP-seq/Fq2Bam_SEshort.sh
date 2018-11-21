@@ -35,8 +35,8 @@ function Fq2Bam {
   echo '[START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
   
   ## Map with bowtie trimming to 36bp:
-  seqtk trimfq -L 36 ${BASENAME}.fastq.gz | \
-    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX2} /dev/stdin >> ${BASENAME}.log | \
+  seqtk trimfq -L 36 ${BASENAME}.fastq.gz 2>> ${BASENAME}.log | \
+    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX2} /dev/stdin 2>> ${BASENAME}.log | \
     samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
