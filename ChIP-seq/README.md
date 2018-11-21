@@ -8,3 +8,11 @@ from like `ENSXXXXXX.fastq.gz` into `[Biosample-Experiment Type-Target-BiolRep-T
 
 ## Fq2Bam_ChIPseqSE.sh
 Script to align single-end `*fastq.gz`to hg38, resulting in unfiltered BAMs `*_raw.bam` and those without unmapped and duplicated reads `*_sorted.bam` plus indices, flagstats, CPM-normalized bigwigs and fastqc reports for each. Simply run `./Fq2Bam.sh` and it does the rest. Needs bwa, fastqc, samtools, sambamba and deeptools in PATH.
+
+## Collapse_Replicates.sh
+This one goes through the files and combined all technical replicates belonging to one biological replicate into one `fastq.gz`.
+For example these two files 
+`FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_TechRep1_ENCFF002AVF.fastq.gz
+FOO_ChIP-seq_H2AFZ_BiolRep1_TechRep2_ENCFF002AYT.fastq.gz`
+will become `FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_combined.fastq.gz`
+It also prints lists with all files used for combining and all those rejected due to read length.
