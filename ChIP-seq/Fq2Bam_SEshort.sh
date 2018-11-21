@@ -2,7 +2,7 @@
 
 ######################################################################################################################################
 
-## ChIP-seq - alignment of single-end fastq files to hg38 :::
+## ChIP-seq - alignment of single-end fastq files to hg38 assuming very short reads from ENCODE:
 ## Assumes script in same dir as fastqs, bwa - samtools - samblaster - deeptools - fastqc
 ## Last update: 20.11.18
 
@@ -27,16 +27,17 @@ function Fq2Bam {
     echo '[ERROR] Input file is missing -- exiting' && exit 1
     fi
   
-  BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
+  ALN_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bowtie_index_noALT_withDecoy/hg38_noALT_withDecoy
   
   ####################################################################################################################################
   
   echo '#############################################################' >> ${BASENAME}.log
   echo '[START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
   
-  ## Map BWA mem regardless of read length:
-  bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 ${BWA_IDX} ${BASENAME}.fastq.gz 2>> ${BASENAME}.log | \
-    samblaster --ignoreUnmated 2>> ${BASENAME}.log 2>> ${BASENAME}.log | \
+  ## Map with bowtie trimming to 36bp:
+  seqtk trimfq -L 36 ${BASENAME}.fastq.gz | \
+    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX2} / >> ${BASENAME}.log | \
+    samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
   
@@ -58,8 +59,5 @@ export -f Fq2Bam
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
   parallel -j 4 "Fq2Bam {}"
   
-## Bigwigs:
-ls *_sorted.bam | parallel -j 4 "bamCoverage -e 400 --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16"
-
 ## Fastqc:
 ls *_raw.bam | parallel "fastqc {}" 
