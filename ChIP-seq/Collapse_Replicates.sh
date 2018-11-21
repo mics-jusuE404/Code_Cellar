@@ -16,17 +16,8 @@ CONDITIONAL_CAT () {
     done < <(ls ${BASENAME}*.fastq.gz)   
 }; export -f CONDITIONAL_CAT    
 
-## For Karpas:
-ls Karpas*fastq.gz | \
+## Run on all files in $(pwd)
+ls *fastq.gz | \
   awk -F "_Tech" '{print $1}' | sort -u | \
     parallel -j 4 "CONDITIONAL_CAT {}"
 
-## For OCI-LY1:
-ls OCI-LY1*fastq.gz | \
-  awk -F "_Tech" '{print $1}' | sort -u | \
-    parallel -j 4 "CONDITIONAL_CAT {}"
-
-## For OCI-LY3:    
-ls OCI-LY3*fastq.gz | \
-  awk -F "_Tech" '{print $1}' | sort -u | \
-    parallel -j 4 "CONDITIONAL_CAT {}"    
