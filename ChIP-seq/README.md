@@ -12,8 +12,10 @@ Script to align single-end `*fastq.gz`to hg38, resulting in unfiltered BAMs `*_r
 ## Collapse_Replicates.sh
 This one goes through the files and combined all technical replicates belonging to one biological replicate into one `fastq.gz`.
 For example these two files 
+
 `FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_TechRep1_ENCFF002AVF.fastq.gz`
 `FOO_ChIP-seq_H2AFZ_BiolRep1_TechRep2_ENCFF002AYT.fastq.gz`
+
 will become
 `FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_combined.fastq.gz`
 It also prints lists with all files used for combining and all those rejected due to read length.
