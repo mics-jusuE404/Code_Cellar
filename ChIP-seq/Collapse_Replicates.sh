@@ -19,7 +19,7 @@ CONDITIONAL_CAT () {
         ## If there is only one file and not multiple, simply rename:
         if [[ $(ls ${BASENAME}*.fastq.gz | wc -l) == 1 ]]; then
           mv $(ls ${BASENAME}*.fastq.gz) ${BASENAME}_combined.fastq.gz
-          
+          echo ${p} >> ${BASENAME}_includeCatList.txt
           ## As only one file, go to next iteration:
           continue
           fi
