@@ -8,7 +8,7 @@
 
 ########################################################################################################################################
 
-## Main function:
+## Function for download and renaming:
 LOAD_RENAME () {
   VAR_STDIN=$1
     
@@ -19,22 +19,37 @@ LOAD_RENAME () {
   ## Download file:
   wget -q $(echo "$VAR_STDIN" | cut -f37)
     
-  ## Rename:  
+  ## Rename in the form [Biosample-Experiment Type-Target-BiolRep-TechRep-File Accession],
+  ## e.g. OCI-LY1_ChIP-seq_H3K4me1-BiolRep1-TechRep1-ENCXXXXXXX.fastq.gz
+  if [[ ! -e $(echo "$VAR_STDIN" | cut -f37 | awk -F "@@download/" '{print $2}') ]]; then
+    echo '[ERROR]:' $(echo "$VAR_STDIN" | cut -f37 | awk -F "@@download/" '{print $2}') 'does not exist'
+    exit 1
+    fi
+    
   mv \
     $(echo "$VAR_STDIN" | cut -f37 | awk -F "@@download/" '{print $2}') \
     $(sed 's#\-human##g' <(paste -d "" \
       <(paste -d "_" \
         <(echo "$VAR_STDIN" | cut -f7) \
         <(echo "$VAR_STDIN" | cut -f5) \
-        <(echo "$VAR_STDIN" | cut -f1) \
         <(echo "$VAR_STDIN" | cut -f13) \
         <(paste -d "" <(echo 'BiolRep') <(echo "$VAR_STDIN" | cut -f25)) \
-        <(paste -d "" <(echo 'TechRep') <(echo "$VAR_STDIN" | cut -f26))) \
+        <(paste -d "" <(echo 'TechRep') <(echo "$VAR_STDIN" | cut -f26)) \
+        <(echo "$VAR_STDIN" | cut -f1))
         <(echo '.fastq.gz'))
       )
 }; export -f LOAD_RENAME
 
-########################################################################################################################################
+## Function for catting isogenic/technical replicates given they are of read length >= 36bp:
+CATTY () {
+  
+
+
+
+
+
+
+
 
 ## Run it on all metadata TSVs in $(pwd):
 for i in *_metadata.tsv
