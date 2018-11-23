@@ -9,8 +9,8 @@
 
 #######
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=144
-#SBATCH --partition=largesmp
+#SBATCH --ntasks-per-node=70
+#SBATCH --partition=hims
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
