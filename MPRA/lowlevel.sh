@@ -168,6 +168,8 @@ function LosPeakos {
   bedtools slop -b 80 -g $CHROMSIZES -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
     
+  source deactivate
+  
 }; export -f LosPeakos    
 
 ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel LosPeakos {}
