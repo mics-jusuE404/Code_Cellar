@@ -124,68 +124,87 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {}"
 ## will crash if one group has no replicates as sambamba expects at least 2 files for merging
 function COMPLEXITY {
   
-  ## Combine all replicates per cell type into one BAM using sambamba merge:
-  find ./ -maxdepth 1 -name "*_rep*_sortedDup.bam" | \
-    awk -F "_rep" '{print $1}' | \
-    sort -k1,1 -u | \
-    parallel -j 4 "sambamba merge -t 16 {}_combined_sortedDup.bam {}*rep*_sortedDup.bam"
+  BASENAME=$1
+
+  ## Check involved BAMs:
+  find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
+    while read p 
+      do; BamCheck $p; done < /dev/stdin
+      
+  ## Merge dup-BAMs for complexity check:
+  find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
+    xargs sambamba merge -t 16 ${BASENAME}_combined_sortedDup.bam
     
+  BamCheck ${BASENAME}_combined_sortedDup.bam
+  
   ## Run preseq c_curve to assess library complexity and saturation at given sequencing depth:
-  find ./ -maxdepth 1 -name "*_combined_sortedDup.bam" | \
-    parallel "preseq c_curve -o {.}_ccurve -s 5e+05 -seed 1 -bam {}"
+  find ./ -maxdepth 1 -name "*_sortedDup.bam" | \
+    parallel "preseq c_curve -o {.}_ccurve -seed 1 -bam {}"
     
 }; export -f COMPLEXITY
 
-COMPLEXITY
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel -j 4 COMPLEXITY {}
 
 ####################################################################################################################################
 ####################################################################################################################################
 
-function PeaksX {
+function LosPeakos {
+  
+  BASENAME=$1
   
   ## Call peaks on the combined DNA sets per cell type with extsize corresponding to average fragment size,
   ## without q-value filtering, as this can be done manually afterwards on $9 of narrowPeak which is -log10(q)
   source activate py27
-  find ./ -maxdepth 1 -name "*DNA*_sortedDeDup.bam" | \
-    awk -F "rep" '{print $1}' | \
-    parallel "macs2 callpeak -t {}*rep*sortedDeDup.bam --nomodel --extsize 80 -n {}_DeDup -g hs -f BAM"
+  
+  while read p
+    do; BamCheck $p
+    done < <(ls ${BASENAME}*rep*sortedDeDup.bam)
+    
+  macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM
   
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
-  find ./ -maxdepth 1 -name "_summits.bed" | \
-    awk -F "_summits.bed" '{print $1}' | \
-    parallel "bedtools slop -b 80 -g $CHROMSIZES -i {}_summits.bed | sort -k1,1 -k2,2n > {}_referenceRegions.bed"
-}; export -f PeaksX    
+  bedtools slop -b 80 -g $CHROMSIZES -i ${BASENAME}_summits.bed | \
+    sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
+    
+}; export -f LosPeakos    
 
-PeaksX
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel LosPeakos {}
 
 ####################################################################################################################################
 ####################################################################################################################################
 
 function CountMatrix {
   
+  BASENAME=$1
+  EXT=$2
+  
   ## First, write all BAM files as fragment-size (80bp) .bed.gz:
   function Bam2Bed {
     bedtools bamtobed -i $1 | \
-      mawk 'OFS="\t" {if ($6 == "+") {print $1, $2, $2+80} else if($6 == "-") print $1, $3-80, $3}' | \
+      mawk -v LEN=${EXT} 'OFS="\t" {if ($6 == "+") {print $1, $2, $2+LEN} else if($6 == "-") print $1, $3-LEN, $3}' | \
       sort -k1,1 -k2,2n --parallel=4
   }; export -f Bam2Bed
   
-  find ./ -maxdepth 1 -name "*.bam" | grep -v 'raw' | \
-    parallel "Bam2Bed {} | bgzip -@ 2 > {.}_ext.bed.gz"
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
+    while read p
+      do; BamCheck $p
+      done < /dev/stdin
+  
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
+    parallel "Bam2Bed {} | bgzip -@ 2 > {.}_ext${EXT}.bed.gz"
   
   ## Then, use bedtools intersect to write a count matrix with header:
   function IntersectX {
-    BASENAME=$1
+
     cat <(ls ${BASENAME}*_ext.bed.gz | xargs echo 'chr' 'start' 'end' | tr " " "\t") \
-        <(bedtools intersect -sorted -c -a ${BASENAME}_referenceRegions.bed -b ${BASENAME}*_ext.bed.gz | cut -f1-3,7-)
+        <(bedtools intersect -sorted -c -a ${BASENAME}_referenceRegions.bed -b ${BASENAME}_ext${EXT}.bed.gz | cut -f1-3,7-)
+        
   }; export -f IntersectX
     
-  find ./ -maxdepth 1 -name "*_referenceRegions.bed" | \
-    awk -F "_referenceRegions.bed" '{print $1}' | \
-    parallel "IntersectX {}"
+  IntersectX ${BASENAME}
 }; export -f CountMatrix    
 
-CountMatrix
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "LosPeakos {} 80"
 
 ####################################################################################################################################
 ####################################################################################################################################
