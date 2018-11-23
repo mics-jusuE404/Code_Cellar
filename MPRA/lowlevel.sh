@@ -5,14 +5,16 @@
 ## Lowlevel script for automated processing of new mpra data.
 ## Naming conventions are ${BASENAME}_(R/D)NA_rep*.fastq.gz
 ## Steps:
+#########
 ##    -- adapter trimming and alignment to hg38 to produce unfiltered, chr/quality-filtered & dup-filtered BAMs
 ##    -- calling peaks on pooled & deduplicated DNA samples
 ##    -- estimate library complexity and saturation with preseq, and make simply x/y plot
 ##    -- with the obtained peaks, make a count matrix for all dup- and dedup,
 ##    -- for this, first extend reads to fragment length (because 50bp single-end sequencing) and store as bed.gz
 ##    -- make CPM-normalized browser tracks for all BAM files
-## Written by Alexander Toenges (Nov 2018)
-## Missing: quality and file integrity checks 
+#########
+## Written by Alexander Toenges (Nov 2018) a.toenges[(#aet#)]uni-muenster.de
+## 
 ####################################################################################################################################
 ####################################################################################################################################
 ##
