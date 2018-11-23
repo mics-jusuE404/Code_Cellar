@@ -28,10 +28,31 @@
 ####################################################################################################################################
 ####################################################################################################################################
 
+## Basic function for BAM quality check
+function BamCheck {
+  
+  BASENAME=${1%_*}
+  
+  ## Run this to stop run in case of a suspiciously looking Bam:
+  function ExitBam {
+    echo '[ERROR]' $1 'looks suspicious or is empty -- exiting' 2>> ${BASENAME}.log 
+  }; export -f ExitBam
+  
+  samtools quickcheck -q $1 && echo '' > /dev/null || ExitBam
+  
+  ## Also check if file is not empty:
+  if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
+    ExitBam
+    fi
+  
+}; export -f BamCheck  
+
 ## Adapter-trim and align data to hg38:
 function Fq2Bam {
 
   BASENAME=$1
+  
+  echo '[Fq2Bam-START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
   
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
     echo '[ERROR] Input file missing -- exiting' && exit 1; fi
@@ -42,27 +63,33 @@ function Fq2Bam {
   CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
   
   ## trim adapters, align and sort:
-  echo '[START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
   cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz 2>> ${BASENAME}.log | \
     bwa mem -v 2 \
       -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin 2>> ${BASENAME}.log | \
     samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
     sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
+    ##
+    BamCheck ${BASENAME}_raw.bam
+    
     
     ## kick out non-primary chromosomes and unmapped reads
     samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' 2>> ${BASENAME}.log | \
       xargs sambamba view -f bam -t 8 --num-filter=0/4 --filter='mapping_quality > 19' 2>> ${BASENAME}.log \
       -o ${BASENAME}_sortedDup.bam ${BASENAME}_raw.bam 2>> ${BASENAME}.log 
+    ##
+    BamCheck ${BASENAME}_sortedDup.bam
     
     ## kick out duplicated previously marked by samblaster
     sambamba view -f bam -t 8 --num-filter=/1028 -o ${BASENAME}_sortedDeDup.bam ${BASENAME}_sortedDup.bam 2>> ${BASENAME}.log
+    ## 
+    BamCheck ${BASENAME}_sortedDeDup.bam
     
     ## flagstat reports
     ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat 2>> ${BASENAME}.log"
     
-  echo '[END]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log
-  
+  echo '[Fq2Bam-END]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log
+
 }; export -f Fq2Bam
 
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {}"
@@ -74,6 +101,13 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {}"
 function mtDNA {
 
   BASENAME=$1 
+  
+  BamCheck ${BASENAME}_raw.bam
+  
+  if [[ ! -e ${BASENAME}_raw.bam.bai ]]; then
+    sambamba index ${BASENAME}_raw.bam
+    fi
+    
   mtReads=$(samtools idxstats ${BASENAME}_raw.bam | grep 'chrM' | cut -f 3)
   totalReads=$(samtools idxstats ${BASENAME}_raw.bam | awk '{SUM += $3} END {print SUM}')
 
@@ -81,7 +115,7 @@ function mtDNA {
  
 }; export -f mtDNA
 
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "mtDNA {}"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {}"
 
 ####################################################################################################################################
 ####################################################################################################################################
