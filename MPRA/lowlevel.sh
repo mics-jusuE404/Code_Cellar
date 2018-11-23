@@ -70,6 +70,7 @@ function mtDNA {
 ####################################################################################################################################
 
 ## Combine all DNA/RNA files including duplicates into one file to run with preseq:
+## will crash if one group has no replicates as sambamba expects at least 2 files for merging
 function COMPLEXITY {
   
   ## Combine using sambamba merge:
@@ -80,7 +81,7 @@ function COMPLEXITY {
     
   ## Run preseq c_curve:
   find ./ -maxdepth 1 -name "*_combined_sortedDup.bam" | \
-    parallel "preseq c_curve -o {.}_ccurve -s 5e+05 -seed 1 {}"
+    parallel "preseq c_curve -o {.}_ccurve -s 5e+05 -seed 1 -bam {}"
     
 }; export -f COMPLEXITY
 
