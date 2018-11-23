@@ -178,18 +178,18 @@ function CountMatrix {
   BASENAME=$1
   EXT=$2
   
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
+    while read p
+      do; BamCheck $p
+      done < /dev/stdin
+      
   ## First, write all BAM files as fragment-size (80bp) .bed.gz:
   function Bam2Bed {
     bedtools bamtobed -i $1 | \
       mawk -v LEN=${EXT} 'OFS="\t" {if ($6 == "+") {print $1, $2, $2+LEN} else if($6 == "-") print $1, $3-LEN, $3}' | \
       sort -k1,1 -k2,2n --parallel=4
   }; export -f Bam2Bed
-  
-  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
-    while read p
-      do; BamCheck $p
-      done < /dev/stdin
-  
+ 
   find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
     parallel "Bam2Bed {} | bgzip -@ 2 > {.}_ext${EXT}.bed.gz"
   
@@ -204,10 +204,11 @@ function CountMatrix {
   IntersectX ${BASENAME}
 }; export -f CountMatrix    
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "LosPeakos {} 80"
+## CountMatrix Basename FragmentSize
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "CountMatrix {} 80"
 
 ####################################################################################################################################
 ####################################################################################################################################
 
 ## Bigwigs:
-ls *_.bam | grep -v 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 9" 
+ls *_.bam | grep -vE 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 9" 
