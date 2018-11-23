@@ -32,6 +32,7 @@
 function Fq2Bam {
 
   BASENAME=$1
+  
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
     echo '[ERROR] Input file missing -- exiting' && exit 1; fi
   
