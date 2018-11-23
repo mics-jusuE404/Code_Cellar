@@ -10,21 +10,20 @@
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
-#SBATCH --job-name=STARR_Align
-#SBATCH --output=Fq2Bam.log
+#SBATCH --job-name=mpra_lowlevel
+#SBATCH --output=lowlevel.log
 #######
 
 ####################################################################################################################################
 ####################################################################################################################################
 
-BASENAME=$1
 
 ####################################################################################################################################
 ####################################################################################################################################
 
 ## Adapter-trim and align data to hg38:
 function Fq2Bam {
-
+  BASENAME=$1
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
     echo '[ERROR] Input file missing -- exiting' && exit 1; fi
   
@@ -59,9 +58,9 @@ function Fq2Bam {
 
 ## Get the percentage of mitochondrial DNA in library:
 function mtDNA {
-
- mtReads=$(samtools idxstats ${BASENAME}_raw.bam | grep 'chrM' | cut -f 3)
- totalReads=$(samtools idxstats ${BASENAME}_raw.bam | awk '{SUM += $3} END {print SUM}')
+  BASENAME=$1 
+  mtReads=$(samtools idxstats ${BASENAME}_raw.bam | grep 'chrM' | cut -f 3)
+  totalReads=$(samtools idxstats ${BASENAME}_raw.bam | awk '{SUM += $3} END {print SUM}')
 
  echo '[mtDNA Content]' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%' > ${BASENAME}_mtDNA.txt
  
@@ -83,7 +82,7 @@ function COMPLEXITY {
   find ./ -maxdepth 1 -name "*_combined_sortedDup.bam" | \
     parallel "preseq c_curve -o {.}_ccurve -s 5e+05 -seed 1 {}"
     
-} export -f COMPLEXITY
+}; export -f COMPLEXITY
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -96,4 +95,4 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
 COMPLEXITY  
   
 ## Bigwigs:
-ls *_sortedDup.bam | parallel -j 4 "bamCoverage -e --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16" 
+ls *_sortedDup.bam | parallel -j 4 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16" 
