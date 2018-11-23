@@ -1,4 +1,6 @@
 #!/bin/bash
+####################################################################################################################################
+####################################################################################################################################
 ##
 ## Lowlevel script for automated processing of new mpra data.
 ## Naming conventions are ${BASENAME}_(R/D)NA_rep*.fastq.gz
@@ -11,8 +13,8 @@
 ##    -- make CPM-normalized browser tracks for all BAM files
 ## Written by Alexander Toenges (Nov 2018)
 ## Missing: quality and file integrity checks 
-##
-#######
+####################################################################################################################################
+####################################################################################################################################
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=71
 #SBATCH --partition=hims
@@ -21,13 +23,13 @@
 #SBATCH --mail-user=a_toen03@uni-muenster.de
 #SBATCH --job-name=mpra_lowlevel
 #SBATCH --output=lowlevel.log
-#######
-
+##
 ####################################################################################################################################
 ####################################################################################################################################
 
 ## Adapter-trim and align data to hg38:
 function Fq2Bam {
+
   BASENAME=$1
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
     echo '[ERROR] Input file missing -- exiting' && exit 1; fi
@@ -36,10 +38,8 @@ function Fq2Bam {
   ADAPTER1="CTGTCTCTTATACACATCT"
   BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
   CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
-  ##################################################################################################################################
-  
+    
   echo '[START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
-  
   cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz 2>> ${BASENAME}.log | \
     bwa mem -v 2 \
       -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin 2>> ${BASENAME}.log | \
@@ -72,6 +72,8 @@ function mtDNA {
  
 }; export -f mtDNA
 
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} && mtDNA {}"
+
 ####################################################################################################################################
 ####################################################################################################################################
 
@@ -91,6 +93,8 @@ function COMPLEXITY {
     
 }; export -f COMPLEXITY
 
+COMPLEXITY
+
 ####################################################################################################################################
 ####################################################################################################################################
 
@@ -108,7 +112,9 @@ function PeaksX {
     awk -F "_summits.bed" '{print $1}' | \
     parallel "bedtools slop -b 80 -g $CHROMSIZES -i {}_summits.bed | sort -k1,1 -k2,2n > {}_referenceRegions.bed"
 }; export -f PeaksX    
-     
+
+PeaksX
+
 ####################################################################################################################################
 ####################################################################################################################################
 
@@ -135,19 +141,11 @@ function CountMatrix {
     awk -F "_referenceRegions.bed" '{print $1}' | \
     parallel "IntersectX {}"
 }; export -f CountMatrix    
-  
-####################################################################################################################################
-####################################################################################################################################
 
-## Alignment (Fq2Bam, mtDNA):
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} && mtDNA {}"
-  
-## Preseq (COMPLEXITY):
-COMPLEXITY  
-  
-## Peaks and counts:
-PeaksX
 CountMatrix
+
+####################################################################################################################################
+####################################################################################################################################
 
 ## Bigwigs:
 ls *_.bam | grep -v 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 9" 
