@@ -163,13 +163,13 @@ function LosPeakos {
     done < <(ls ${BASENAME}*rep*sortedDeDup.bam)
     
   macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM
+  source deactivate
   
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
   bedtools slop -b 80 -g $CHROMSIZES -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
-    
-  source deactivate
   
+  awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
 }; export -f LosPeakos    
 
 ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel LosPeakos {}
@@ -190,22 +190,21 @@ function CountMatrix {
   ## First, write all BAM files as fragment-size (80bp) .bed.gz:
   function Bam2Bed {
     bedtools bamtobed -i $1 | \
-      mawk -v LEN=${EXT} 'OFS="\t" {if ($6 == "+") {print $1, $2, $2+LEN} else if($6 == "-") print $1, $3-LEN, $3}' | \
-      sort -k1,1 -k2,2n --parallel=4
+      mawk -v LEN=${EXT} 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+LEN,$4,$5,$6} else if($6 == "-") print $1,$3-LEN,$3,$4,$5,$6}' | \
+      bedtools bedtobam -i - -g $CHROMSIZES > ${1%.bam}_ext${EXT}.bam
   }; export -f Bam2Bed
  
   find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
     parallel "Bam2Bed {} | bgzip -@ 2 > {.}_ext${EXT}.bed.gz"
   
   ## Then, use bedtools intersect to write a count matrix with header:
-  function IntersectX {
+  function Fcount {
 
-    cat <(ls ${BASENAME}*_ext.bed.gz | xargs echo 'chr' 'start' 'end' | tr " " "\t") \
-        <(bedtools intersect -sorted -c -a ${BASENAME}_referenceRegions.bed -b ${BASENAME}_ext${EXT}.bed.gz | cut -f1-3,7-)
+    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}.counts ${BASENAME}*rep*Dup*.bam
         
-  }; export -f IntersectX
+  }; export -f Fcount
     
-  IntersectX ${BASENAME}
+  Fcount ${BASENAME}
 }; export -f CountMatrix    
 
 ## CountMatrix Basename FragmentSize
