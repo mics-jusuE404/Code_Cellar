@@ -130,7 +130,7 @@ function COMPLEXITY {
   ## Check involved BAMs which are all BAMS with dups includes:
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
     while read p 
-      do; BamCheck $p; done < /dev/stdin
+      do BamCheck $p; done < /dev/stdin
       
   ## Merge all dup-BAMs of one condition per cyll type for complexity check:
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
@@ -144,7 +144,7 @@ function COMPLEXITY {
     
 }; export -f COMPLEXITY
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel -j 8 "COMPLEXITY {} 2>> ${BASENAME}_complexity.log"
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel -j 8 "COMPLEXITY {} 2>> {}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -158,7 +158,7 @@ function LosPeakos {
   source activate py27
   
   while read p
-    do; BamCheck $p
+    do BamCheck $p
     done < <(ls ${BASENAME}*rep*sortedDeDup.bam)
     
   macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM
@@ -171,7 +171,29 @@ function LosPeakos {
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
 }; export -f LosPeakos    
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel "LosPeakos {} 2>> ${BASENAME}_macs2.log"
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel "LosPeakos {} 2>> {}_macs2.log"
+
+####################################################################################################################################
+####################################################################################################################################
+
+## Extend all reads to fragment length:
+function Bam2Bed {
+  
+  BAM=$1
+  EXT=$2
+  
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v$ '_raw' | \
+    while read p
+      do BamCheck $p
+      done < /dev/stdin
+      
+  bedtools bamtobed -i $BAM | \
+    mawk -v ext="${EXT}" 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+ext,$4,$5,$6} else if($6 == "-") print $1,$3-ext,$3,$4,$5,$6}' | \
+    bedtools bedtobam -i - -g $CHROMSIZES > ${BAM%.bam}_ext${EXT}.bam
+}; export -f Bam2Bed
+  
+find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -vE 'combined|_raw' | \
+  parallel "Bam2Bed {} 80 2>> {}_extendBam.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -179,23 +201,7 @@ ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel "LosPeakos
 function CountMatrix {
   
   BASENAME=$1
-  EXT=$2
-  
-  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v$ 'combined|_raw' | \
-    while read p
-      do; BamCheck $p
-      done < /dev/stdin
-      
-  ## First, write all BAM files as fragment-size (80bp) .bed.gz:
-  function Bam2Bed {
-    bedtools bamtobed -i $1 | \
-      mawk -v LEN=${EXT} 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+LEN,$4,$5,$6} else if($6 == "-") print $1,$3-LEN,$3,$4,$5,$6}' | \
-      bedtools bedtobam -i - -g $CHROMSIZES > ${1%.bam}_ext${EXT}.bam
-  }; export -f Bam2Bed
- 
-  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -vE 'combined|_raw' | \
-    parallel "Bam2Bed {} | bgzip -@ 2 > {.}_ext${EXT}.bed.gz"
-  
+    
   ## Then, use bedtools intersect to write a count matrix with header:
   function Fcount {
 
@@ -207,7 +213,7 @@ function CountMatrix {
 }; export -f CountMatrix    
 
 ## CountMatrix Basename FragmentSize
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "CountMatrix {} 80 2>> ${BASENAME}_countmatrix.log"
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "CountMatrix {} 80 2>> {}_countmatrix.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
