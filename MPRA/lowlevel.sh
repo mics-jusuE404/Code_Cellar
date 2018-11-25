@@ -121,32 +121,40 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {} 2>> {}.log"
 ####################################################################################################################################
 ####################################################################################################################################
 
-## Combine all DNA/RNA files including duplicates into one file to run with preseq:
-## will crash if one group has no replicates as sambamba expects at least 2 files for merging
+## Combine all _sortedDup.bam files into one for each condition for use with preseq c_curve:
+function MergeBam {
 
-function COMPLEXITY {
-  
   BASENAME=$1
-
-  ## Check involved BAMs which are all BAMS with dups includes:
+  
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
     while read p 
       do BamCheck $p; done < /dev/stdin
       
-  ## Merge all dup-BAMs of one condition per cyll type for complexity check:
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
     xargs sambamba merge -t 16 ${BASENAME}_combined_sortedDup.bam
     
-  BamCheck ${BASENAME}_combined_sortedDup.bam
+}; export -f MergeBam
+
+find ./ -maxdepth 1 -name "*_sortedDup.bam" | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | \
+  parallel -j 4 "MergeBam {} 2>> {}_complexity.log"
+
+## Combine all DNA/RNA files including duplicates into one file to run with preseq:
+## will crash if one group has no replicates as sambamba expects at least 2 files for merging
+
+####################################################################################################################################
+####################################################################################################################################
+
+function COMPLEXITY {
   
-  ## Run preseq c_curve to assess library complexity and saturation at given sequencing depth:
-  find ./ -maxdepth 1 -name "${BASENAME}*_sortedDup.bam" | \
-    parallel "preseq c_curve -o {.}_ccurve.txt -seed 1 -bam {}"
+  BAM=$1
+  BamCheck $BAM
+  
+  ## Create library complexity curve:
+  preseq c_curve -o ${BAM%.bam}_ccurve.txt -seed 1 -bam $BAM
     
 }; export -f COMPLEXITY
 
-find ./ -maxdepth 1 -name "*_sortedDup.bam" | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
-  parallel -j 4 "COMPLEXITY {} 2>> {}_complexity.log"
+find ./ -maxdepth 1 -name "*_combined_sortedDup.bam" | parallel "COMPLEXITY {} {.}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -157,12 +165,12 @@ function LosPeakos {
   
   ## Call peaks on the combined DNA sets per cell type with extsize corresponding to average fragment size,
   ## without q-value filtering, as this can be done manually afterwards on $9 of narrowPeak which is -log10(q)
-  source activate py27
   
-  while read p
+  ls ${BASENAME}*rep*sortedDeDup.bam | while read p
     do BamCheck $p
-    done < <(ls ${BASENAME}*rep*sortedDeDup.bam)
-    
+    done < /dev/stdin
+  
+  source activate py27
   macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM -o ${BASENAME}
   source deactivate
   
@@ -173,7 +181,7 @@ function LosPeakos {
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
 }; export -f LosPeakos    
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | parallel "LosPeakos {} 2>> {}_macs2.log"
+ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | parallel "LosPeakos {} 2>> {}_macs2.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
