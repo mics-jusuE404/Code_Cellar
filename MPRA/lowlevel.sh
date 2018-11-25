@@ -1,12 +1,11 @@
 #!/bin/bash
-####################################################################################################################################
-####################################################################################################################################
-##
+########
+########
 ## Lowlevel processing for mpra data.
 ## Naming conventions for fastqs are ${BASENAME}_(R/D)NA_rep*.fastq.gz
+#########
+#########
 ## Steps:
-#########
-#########
 ##    -- adapter trimming and alignment to hg38 to produce unfiltered, chr/quality-filtered & dup-filtered BAMs
 ##    -- calling peaks on pooled & deduplicated DNA samples
 ##    -- estimate library complexity and saturation with preseq, and make simply x/y plot
