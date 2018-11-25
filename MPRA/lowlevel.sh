@@ -65,29 +65,29 @@ function Fq2Bam {
   CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
   
   ## trim adapters, align and sort:
-  cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz >/dev/stderr | \
+  cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
     bwa mem -v 2 \
-      -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin >/dev/stderr | \
-    samblaster --ignoreUnmated 2>> >/dev/stderr | \
-    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin >/dev/stderr | \
-    sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin >/dev/stderr
+      -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
+    samblaster --ignoreUnmated | \
+    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
+    sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
     ##
     BamCheck ${BASENAME}_raw.bam
     
     ## kick out non-primary chromosomes and unmapped reads
-    samtools idxstats ${BASENAME}_raw.bam >/dev/stderr | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' >/dev/stderr | \
-      xargs sambamba view -f bam -t 8 --num-filter=0/4 --filter='mapping_quality > 19' >/dev/stderr \
-      -o ${BASENAME}_sortedDup.bam ${BASENAME}_raw.bam >/dev/stderr 
+    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+      xargs sambamba view -f bam -t 8 --num-filter=0/4 --filter='mapping_quality > 19' \
+      -o ${BASENAME}_sortedDup.bam ${BASENAME}_raw.bam
     ##
     BamCheck ${BASENAME}_sortedDup.bam
     
     ## kick out duplicated previously marked by samblaster
-    sambamba view -f bam -t 8 --num-filter=/1028 -o ${BASENAME}_sortedDeDup.bam ${BASENAME}_sortedDup.bam >/dev/stderr
+    sambamba view -f bam -t 8 --num-filter=/1028 -o ${BASENAME}_sortedDeDup.bam ${BASENAME}_sortedDup.bam
     ## 
     BamCheck ${BASENAME}_sortedDeDup.bam
     
     ## flagstat reports
-    ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat >/dev/stderr"
+    ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
   paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date) >/dev/stderr
 
@@ -116,7 +116,7 @@ function mtDNA {
  
 }; export -f mtDNA
 
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {}"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {} 2>> {}.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -127,24 +127,24 @@ function COMPLEXITY {
   
   BASENAME=$1
 
-  ## Check involved BAMs:
+  ## Check involved BAMs which are all BAMS with dups includes:
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
     while read p 
       do; BamCheck $p; done < /dev/stdin
       
-  ## Merge dup-BAMs for complexity check:
+  ## Merge all dup-BAMs of one condition per cyll type for complexity check:
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
-    xargs sambamba merge -t 16 ${BASENAME}_combined_sortedDup.bam
+    xargs sambamba merge -t 8 ${BASENAME}_combined_sortedDup.bam
     
   BamCheck ${BASENAME}_combined_sortedDup.bam
   
   ## Run preseq c_curve to assess library complexity and saturation at given sequencing depth:
-  find ./ -maxdepth 1 -name "*_sortedDup.bam" | \
+  find ./ -maxdepth 1 -name "${BASENAME}*_sortedDup.bam" | \
     parallel "preseq c_curve -o {.}_ccurve -seed 1 -bam {}"
     
 }; export -f COMPLEXITY
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel -j 4 COMPLEXITY {}
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel -j 8 "COMPLEXITY {} 2>> ${BASENAME}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -171,7 +171,7 @@ function LosPeakos {
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
 }; export -f LosPeakos    
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel LosPeakos {}
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel "LosPeakos {} 2>> ${BASENAME}_macs2.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -181,7 +181,7 @@ function CountMatrix {
   BASENAME=$1
   EXT=$2
   
-  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v$ 'combined|_raw' | \
     while read p
       do; BamCheck $p
       done < /dev/stdin
@@ -193,7 +193,7 @@ function CountMatrix {
       bedtools bedtobam -i - -g $CHROMSIZES > ${1%.bam}_ext${EXT}.bam
   }; export -f Bam2Bed
  
-  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v 'combined' | \
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -vE 'combined|_raw' | \
     parallel "Bam2Bed {} | bgzip -@ 2 > {.}_ext${EXT}.bed.gz"
   
   ## Then, use bedtools intersect to write a count matrix with header:
@@ -207,7 +207,7 @@ function CountMatrix {
 }; export -f CountMatrix    
 
 ## CountMatrix Basename FragmentSize
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "CountMatrix {} 80"
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "CountMatrix {} 80 2>> ${BASENAME}_countmatrix.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
