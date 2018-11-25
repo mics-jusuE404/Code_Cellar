@@ -43,7 +43,10 @@ function ExitBam {
   (>&2 echo '[ERROR]' $1 'looks suspicious or is empty -- exiting') && exit 1
   
 }; export -f ExitBam
-  
+
+####################################################################################################################################
+####################################################################################################################################
+
 ## Basic function for BAM quality check
 function BamCheck {
   
@@ -56,6 +59,9 @@ function BamCheck {
     fi
   
 }; export -f BamCheck  
+
+####################################################################################################################################
+####################################################################################################################################
 
 ## Adapter-trim and align data to hg38:
 function Fq2Bam {
@@ -102,7 +108,9 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {
 
 ## Get the percentage of mitochondrial DNA in library using the samtools idxstats report:
 function mtDNA {
-
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'mtDNA for' $1 'started on') <(date))
+  
   BASENAME=$1 
   
   BamCheck ${BASENAME}_raw.bam
@@ -116,6 +124,8 @@ function mtDNA {
 
  echo '[mtDNA Content]' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%' > ${BASENAME}_mtDNA.txt
  
+ (>&2 paste -d " " <(echo '[INFO]' 'mtDNA for' $1 'ended on') <(date))
+ 
 }; export -f mtDNA
 
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {} 2>> {}.log"
@@ -125,16 +135,20 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {} 2>> {}.log"
 
 ## Combine all _sortedDup.bam files into one for each condition for use with preseq c_curve:
 function MergeBam {
-
-  BASENAME=$1
   
+  (>&2 paste -d " " <(echo '[INFO]' 'MergeBam for' $1 'started on') <(date))
+  
+  BASENAME=$1
+
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
     while read p 
       do BamCheck $p; done < /dev/stdin
       
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
     xargs sambamba merge -t 16 ${BASENAME}_merged_sortedDup.bam
-    
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'MergeBam for' $1 'ended on') <(date))
+  
 }; export -f MergeBam
 
 ls *_sortedDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | \
@@ -148,11 +162,15 @@ ls *_sortedDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' 
 
 function COMPLEXITY {
   
+  (>&2 paste -d " " <(echo '[INFO]' 'COMPLEXITY for' $1 'started on') <(date))
+
   BAM=$1
   BamCheck $BAM
   
   ## Create library complexity curve:
   preseq c_curve -s 5e+05 -o ${BAM%.bam}_ccurve.txt -seed 1 -bam $BAM
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'COMPLEXITY for' $1 'ended on') <(date))
     
 }; export -f COMPLEXITY
 
@@ -164,6 +182,8 @@ ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "COMPLEXITY {} {.}_complexity.log
 function LosPeakos {
   
   BASENAME=$1
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'LosPeakos for' $1 'started on') <(date))
   
   ## Call peaks on the combined DNA sets per cell type with extsize corresponding to average fragment size,
   ## without q-value filtering, as this can be done manually afterwards on $9 of narrowPeak which is -log10(q)
@@ -181,6 +201,9 @@ function LosPeakos {
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
   
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'LosPeakos for' $1 'ended on') <(date))
+
 }; export -f LosPeakos    
 
 ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | parallel "LosPeakos {} 2>> {}_macs2.log"
@@ -190,7 +213,9 @@ ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA'
 
 ## Extend all reads to fragment length:
 function BamExtend {
-
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'BamExtend for' $1 'started on') <(date))
+  
   BAM=$1
   EXT=$2
   
@@ -202,6 +227,9 @@ function BamExtend {
   bedtools bamtobed -i $BAM | \
     mawk -v ext=${EXT} 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+ext,$4,$5,$6} else if($6 == "-") print $1,$3-ext,$3,$4,$5,$6}' | \
     bedtools bedtobam -i - -g $CHROMSIZES > ${BAM%.bam}_ext${EXT}.bam
+    
+  (>&2 paste -d " " <(echo '[INFO]' 'BamExtend for' $1 'ended on') <(date))
+  
 }; export -f BamExtend
   
 ls *.bam | grep -vE 'merged|_raw' | \
@@ -217,7 +245,8 @@ function CountMatrix {
   ## Then, use bedtools intersect to write a count matrix with header:
   function Fcount {
 
-    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}.counts ${BASENAME}*rep*Dup*.bam
+    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}.counts \
+      ${BASENAME}*rep*sortedDup.bam ${BASENAME}*rep*sortedDeDup.bam
         
   }; export -f Fcount
     
@@ -225,7 +254,8 @@ function CountMatrix {
 }; export -f CountMatrix    
 
 ## CountMatrix Basename FragmentSize
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | parallel "CountMatrix {} 80 2>> {}_countmatrix.log"
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
+  'parallel "CountMatrix {} 2>> {}_countmatrix.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
