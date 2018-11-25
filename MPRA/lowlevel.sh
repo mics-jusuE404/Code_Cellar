@@ -167,9 +167,9 @@ ls *_sortedDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' 
 ####################################################################################################################################
 ####################################################################################################################################
 
-function COMPLEXITY {
+function Complexity {
   
-  (>&2 paste -d " " <(echo '[INFO]' 'COMPLEXITY for' $1 'started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Complexity for' $1 'started on') <(date))
 
   BAM=$1
   BamCheck $BAM
@@ -179,18 +179,18 @@ function COMPLEXITY {
   
   (>&2 paste -d " " <(echo '[INFO]' 'COMPLEXITY for' $1 'ended on') <(date))
     
-}; export -f COMPLEXITY
+}; export -f Complexity
 
-ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "COMPLEXITY {} {.}_complexity.log"
+ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "Complexity {} {.}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
 
-function LosPeakos {
+function PeakCall {
   
   BASENAME=$1
   
-  (>&2 paste -d " " <(echo '[INFO]' 'LosPeakos for' $1 'started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'PeakCall for' $1 'started on') <(date))
   
   ## Call peaks on the combined DNA sets per cell type with extsize corresponding to average fragment size,
   ## without q-value filtering, as this can be done manually afterwards on $9 of narrowPeak which is -log10(q)
@@ -209,9 +209,9 @@ function LosPeakos {
   
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
   
-  (>&2 paste -d " " <(echo '[INFO]' 'LosPeakos for' $1 'ended on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'PeakCall for' $1 'ended on') <(date))
 
-}; export -f LosPeakos    
+}; export -f PeakCall    
 
 ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | parallel "LosPeakos {} 2>> {}_macs2.log"
 
