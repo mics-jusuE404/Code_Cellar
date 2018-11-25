@@ -6,11 +6,10 @@
 #########
 #########
 ## Steps:
-##    -- adapter trimming and alignment to hg38 to produce unfiltered, chr/quality-filtered & dup-filtered BAMs
-##    -- calling peaks on pooled & deduplicated DNA samples
-##    -- estimate library complexity and saturation with preseq, and make simply x/y plot
-##    -- with the obtained peaks, make a count matrix for all dup- and dedup,
-##    -- for this, first extend reads to fragment length (because 50bp single-end sequencing) and then count reads over reference
+##    -- adapter trimming and alignment to hg38
+##    -- calling peaks on pooled & deduplicated DNA libraries
+##    -- estimate library complexity and saturation with preseq
+##    -- make count matrices from fragment-size extended BAM files (single-end)
 ##    -- make CPM-normalized browser tracks for all BAM files
 #########
 #########
@@ -69,7 +68,7 @@ function BamCheck {
 ####################################################################################################################################
 ####################################################################################################################################
 
-## Adapter-trim and align data to hg38:
+## Trim and align data to hg38:
 function Fq2Bam {
   
   BASENAME=$1
@@ -267,4 +266,4 @@ ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
 ####################################################################################################################################
 
 ## Bigwigs:
-ls *_.bam | grep -vE 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 9" 
+ls *_.bam | grep -vE 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 8" 
