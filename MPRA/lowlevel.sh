@@ -34,19 +34,25 @@ CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
 ADAPTER1="CTGTCTCTTATACACATCT"
 BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
 
+####################################################################################################################################
+####################################################################################################################################
+
+## Quality check:
 function ExitBam {
-  echo '[ERROR]' $1 'looks suspicious or is empty -- exiting' >/dev/stderr
+
+  (>&2 echo '[ERROR]' $1 'looks suspicious or is empty -- exiting') && exit 1
+  
 }; export -f ExitBam
   
 ## Basic function for BAM quality check
 function BamCheck {
   
   BASENAME=${1%_*}
-  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam
+  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam $1
   
   ## Also check if file is not empty:
   if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
-    ExitBam
+    ExitBam $BASENAME
     fi
   
 }; export -f BamCheck  
@@ -56,10 +62,10 @@ function Fq2Bam {
   
   BASENAME=$1
   
-  paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date) >/dev/stderr
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
   
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
-    echo '[ERROR] Input file missing -- exiting' >/dev/stderr && exit 1; fi
+    (>&2 echo '[ERROR] Input file missing -- exiting') && exit 1; fi
   
   ## trim adapters, align and sort:
   cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
@@ -85,7 +91,7 @@ function Fq2Bam {
     ## flagstat reports
     ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
-  paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date) >/dev/stderr
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
 
 }; export -f Fq2Bam
 
