@@ -37,10 +37,10 @@ function BamCheck {
   
   ## Run this to stop run in case of a suspiciously looking Bam:
   function ExitBam {
-    echo '[ERROR]' $1 'looks suspicious or is empty -- exiting' 2>> ${BASENAME}.log 
+    echo '[ERROR]' $1 'looks suspicious or is empty -- exiting' >/dev/stderr
   }; export -f ExitBam
   
-  samtools quickcheck -q $1 && echo '' > /dev/null || ExitBam
+  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam
   
   ## Also check if file is not empty:
   if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
@@ -54,10 +54,10 @@ function Fq2Bam {
 
   BASENAME=$1
   
-  echo '[Fq2Bam-START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
+  paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date) >/dev/stderr
   
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
-    echo '[ERROR] Input file missing -- exiting' && exit 1; fi
+    echo '[ERROR] Input file missing -- exiting' >/dev/stderr && exit 1; fi
   
   ## Adapters/Index:
   ADAPTER1="CTGTCTCTTATACACATCT"
@@ -65,36 +65,35 @@ function Fq2Bam {
   CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
   
   ## trim adapters, align and sort:
-  cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz 2>> ${BASENAME}.log | \
+  cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz >/dev/stderr | \
     bwa mem -v 2 \
-      -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin 2>> ${BASENAME}.log | \
-    samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
-    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
-    sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
+      -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin >/dev/stderr | \
+    samblaster --ignoreUnmated 2>> >/dev/stderr | \
+    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin >/dev/stderr | \
+    sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin >/dev/stderr
     ##
     BamCheck ${BASENAME}_raw.bam
     
-    
     ## kick out non-primary chromosomes and unmapped reads
-    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' 2>> ${BASENAME}.log | \
-      xargs sambamba view -f bam -t 8 --num-filter=0/4 --filter='mapping_quality > 19' 2>> ${BASENAME}.log \
-      -o ${BASENAME}_sortedDup.bam ${BASENAME}_raw.bam 2>> ${BASENAME}.log 
+    samtools idxstats ${BASENAME}_raw.bam >/dev/stderr | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' >/dev/stderr | \
+      xargs sambamba view -f bam -t 8 --num-filter=0/4 --filter='mapping_quality > 19' >/dev/stderr \
+      -o ${BASENAME}_sortedDup.bam ${BASENAME}_raw.bam >/dev/stderr 
     ##
     BamCheck ${BASENAME}_sortedDup.bam
     
     ## kick out duplicated previously marked by samblaster
-    sambamba view -f bam -t 8 --num-filter=/1028 -o ${BASENAME}_sortedDeDup.bam ${BASENAME}_sortedDup.bam 2>> ${BASENAME}.log
+    sambamba view -f bam -t 8 --num-filter=/1028 -o ${BASENAME}_sortedDeDup.bam ${BASENAME}_sortedDup.bam >/dev/stderr
     ## 
     BamCheck ${BASENAME}_sortedDeDup.bam
     
     ## flagstat reports
-    ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat 2>> ${BASENAME}.log"
+    ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat >/dev/stderr"
     
-  echo '[Fq2Bam-END]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log
+  paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date) >/dev/stderr
 
 }; export -f Fq2Bam
 
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {}"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
