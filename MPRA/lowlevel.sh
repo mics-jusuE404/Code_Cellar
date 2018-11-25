@@ -10,7 +10,7 @@
 ##    -- calling peaks on pooled & deduplicated DNA samples
 ##    -- estimate library complexity and saturation with preseq, and make simply x/y plot
 ##    -- with the obtained peaks, make a count matrix for all dup- and dedup,
-##    -- for this, first extend reads to fragment length (because 50bp single-end sequencing) and store as bed.gz
+##    -- for this, first extend reads to fragment length (because 50bp single-end sequencing) and then count reads over reference
 ##    -- make CPM-normalized browser tracks for all BAM files
 #########
 ## Written by Alexander Toenges (Nov 2018) a.toenges[(#aet#)]uni-muenster.de
@@ -123,6 +123,7 @@ ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel "mtDNA {} 2>> {}.log"
 
 ## Combine all DNA/RNA files including duplicates into one file to run with preseq:
 ## will crash if one group has no replicates as sambamba expects at least 2 files for merging
+
 function COMPLEXITY {
   
   BASENAME=$1
@@ -134,17 +135,18 @@ function COMPLEXITY {
       
   ## Merge all dup-BAMs of one condition per cyll type for complexity check:
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
-    xargs sambamba merge -t 8 ${BASENAME}_combined_sortedDup.bam
+    xargs sambamba merge -t 16 ${BASENAME}_combined_sortedDup.bam
     
   BamCheck ${BASENAME}_combined_sortedDup.bam
   
   ## Run preseq c_curve to assess library complexity and saturation at given sequencing depth:
   find ./ -maxdepth 1 -name "${BASENAME}*_sortedDup.bam" | \
-    parallel "preseq c_curve -o {.}_ccurve -seed 1 -bam {}"
+    parallel "preseq c_curve -o {.}_ccurve.txt -seed 1 -bam {}"
     
 }; export -f COMPLEXITY
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel -j 8 "COMPLEXITY {} 2>> {}_complexity.log"
+find ./ -maxdepth 1 -name "*_sortedDup.bam" | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
+  parallel -j 4 "COMPLEXITY {} 2>> {}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -161,7 +163,7 @@ function LosPeakos {
     do BamCheck $p
     done < <(ls ${BASENAME}*rep*sortedDeDup.bam)
     
-  macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM
+  macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM -o ${BASENAME}
   source deactivate
   
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
@@ -171,7 +173,7 @@ function LosPeakos {
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
 }; export -f LosPeakos    
 
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | parallel "LosPeakos {} 2>> {}_macs2.log"
+ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | parallel "LosPeakos {} 2>> {}_macs2.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
