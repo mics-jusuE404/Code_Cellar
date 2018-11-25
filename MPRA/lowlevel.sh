@@ -30,16 +30,18 @@
 ####################################################################################################################################
 ####################################################################################################################################
 
+CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
+ADAPTER1="CTGTCTCTTATACACATCT"
+BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+
+function ExitBam {
+  echo '[ERROR]' $1 'looks suspicious or is empty -- exiting' >/dev/stderr
+}; export -f ExitBam
+  
 ## Basic function for BAM quality check
 function BamCheck {
   
   BASENAME=${1%_*}
-  
-  ## Run this to stop run in case of a suspiciously looking Bam:
-  function ExitBam {
-    echo '[ERROR]' $1 'looks suspicious or is empty -- exiting' >/dev/stderr
-  }; export -f ExitBam
-  
   samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam
   
   ## Also check if file is not empty:
@@ -51,7 +53,7 @@ function BamCheck {
 
 ## Adapter-trim and align data to hg38:
 function Fq2Bam {
-
+  
   BASENAME=$1
   
   paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date) >/dev/stderr
@@ -59,15 +61,9 @@ function Fq2Bam {
   if [[ ! -e ${BASENAME}.fastq.gz ]]; then
     echo '[ERROR] Input file missing -- exiting' >/dev/stderr && exit 1; fi
   
-  ## Adapters/Index:
-  ADAPTER1="CTGTCTCTTATACACATCT"
-  BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
-  CHROMSIZES="/scratch/tmp/a_toen03/Genomes/hg38/hg38_chromSizes.txt"
-  
   ## trim adapters, align and sort:
   cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
-    bwa mem -v 2 \
-      -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
+    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 "${BWA_IDX}" /dev/stdin | \
     samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
     sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
@@ -131,12 +127,12 @@ function MergeBam {
       do BamCheck $p; done < /dev/stdin
       
   find ./ -maxdepth 1 -name "${BASENAME}*_rep*_sortedDup.bam" | \
-    xargs sambamba merge -t 16 ${BASENAME}_combined_sortedDup.bam
+    xargs sambamba merge -t 16 ${BASENAME}_merged_sortedDup.bam
     
 }; export -f MergeBam
 
-find ./ -maxdepth 1 -name "*_sortedDup.bam" | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | \
-  parallel -j 4 "MergeBam {} 2>> {}_complexity.log"
+ls *_sortedDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | \
+  parallel -j 4 "MergeBam {} 2>> {.}_MergeBam.log"
 
 ## Combine all DNA/RNA files including duplicates into one file to run with preseq:
 ## will crash if one group has no replicates as sambamba expects at least 2 files for merging
@@ -150,11 +146,11 @@ function COMPLEXITY {
   BamCheck $BAM
   
   ## Create library complexity curve:
-  preseq c_curve -o ${BAM%.bam}_ccurve.txt -seed 1 -bam $BAM
+  preseq c_curve -s 5e+05 -o ${BAM%.bam}_ccurve.txt -seed 1 -bam $BAM
     
 }; export -f COMPLEXITY
 
-find ./ -maxdepth 1 -name "*_combined_sortedDup.bam" | parallel "COMPLEXITY {} {.}_complexity.log"
+ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "COMPLEXITY {} {.}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -171,11 +167,11 @@ function LosPeakos {
     done < /dev/stdin
   
   source activate py27
-  macs2 callpeak -t ${BASENAME}*rep*sortedDeDup.bam --nomodel --extsize 80 -n ${BASENAME} -g hs -f BAM -o ${BASENAME}
+  macs2 callpeak --nomodel --extsize 80 -g hs -f BAM -n ${BASENAME} -t ${BASENAME}*rep*sortedDeDup.bam
   source deactivate
   
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
-  bedtools slop -b 80 -g $CHROMSIZES -i ${BASENAME}_summits.bed | \
+  bedtools slop -b 80 -g "$CHROMSIZES" -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
   
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
@@ -187,23 +183,23 @@ ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA'
 ####################################################################################################################################
 
 ## Extend all reads to fragment length:
-function Bam2Bed {
-  
+function BamExtend {
+
   BAM=$1
   EXT=$2
   
-  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v$ '_raw' | \
+  find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -v '_raw' | \
     while read p
       do BamCheck $p
       done < /dev/stdin
       
   bedtools bamtobed -i $BAM | \
-    mawk -v ext="${EXT}" 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+ext,$4,$5,$6} else if($6 == "-") print $1,$3-ext,$3,$4,$5,$6}' | \
+    mawk -v ext=${EXT} 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+ext,$4,$5,$6} else if($6 == "-") print $1,$3-ext,$3,$4,$5,$6}' | \
     bedtools bedtobam -i - -g $CHROMSIZES > ${BAM%.bam}_ext${EXT}.bam
-}; export -f Bam2Bed
+}; export -f BamExtend
   
-find ./ -maxdepth 1 -name "${BASENAME}*.bam" | grep -vE 'combined|_raw' | \
-  parallel "Bam2Bed {} 80 2>> {}_extendBam.log"
+ls *.bam | grep -vE 'merged|_raw' | \
+  parallel "BamExtend {} 80 2>> {.}_BamExtend.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
