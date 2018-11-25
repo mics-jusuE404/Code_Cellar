@@ -2,9 +2,10 @@
 ####################################################################################################################################
 ####################################################################################################################################
 ##
-## Lowlevel script for automated processing of new mpra data.
-## Naming conventions are ${BASENAME}_(R/D)NA_rep*.fastq.gz
+## Lowlevel processing for mpra data.
+## Naming conventions for fastqs are ${BASENAME}_(R/D)NA_rep*.fastq.gz
 ## Steps:
+#########
 #########
 ##    -- adapter trimming and alignment to hg38 to produce unfiltered, chr/quality-filtered & dup-filtered BAMs
 ##    -- calling peaks on pooled & deduplicated DNA samples
@@ -13,11 +14,15 @@
 ##    -- for this, first extend reads to fragment length (because 50bp single-end sequencing) and then count reads over reference
 ##    -- make CPM-normalized browser tracks for all BAM files
 #########
-## Written by Alexander Toenges (Nov 2018) a.toenges[(#aet#)]uni-muenster.de
-## 
+#########
+##    -- Written by Alexander Toenges (Nov 2018) a.toenges[(#aet#)]uni-muenster.de 
+#########
+#########
 ####################################################################################################################################
 ####################################################################################################################################
+###
 ##
+#
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=71
 #SBATCH --partition=hims
@@ -26,7 +31,9 @@
 #SBATCH --mail-user=a_toen03@uni-muenster.de
 #SBATCH --job-name=mpra_lowlevel
 #SBATCH --output=lowlevel.log
+#
 ##
+###
 ####################################################################################################################################
 ####################################################################################################################################
 
@@ -75,7 +82,7 @@ function Fq2Bam {
   
   ## trim adapters, align and sort:
   cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
-    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 "${BWA_IDX}" /dev/stdin | \
+    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
     samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
     sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
