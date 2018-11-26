@@ -79,8 +79,8 @@ function Fq2Bam {
     (>&2 echo '[ERROR] Input file missing -- exiting') && exit 1; fi
   
   ## trim adapters, align and sort:
-  cutadapt -j 4 -a $ADAPTER1 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
-    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
+  cutadapt -j 4 -a $2 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
+    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 $3 /dev/stdin | \
     samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
     sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
@@ -106,7 +106,7 @@ function Fq2Bam {
 
 }; export -f Fq2Bam
 
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} $ADAPTER1 $BWA_IDX 2>> {}.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -202,7 +202,7 @@ function PeakCall {
   source deactivate
   
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
-  bedtools slop -b 80 -g "$CHROMSIZES" -i ${BASENAME}_summits.bed | \
+  bedtools slop -b 80 -g $2" -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
   
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
@@ -211,7 +211,8 @@ function PeakCall {
 
 }; export -f PeakCall    
 
-ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | parallel "LosPeakos {} 2>> {}_macs2.log"
+ls *sortedDeDup.bam | awk -F "_rep" '{print $1}' | sort -k1,1 -u | grep -v 'RNA' | \
+  parallel "PeakCall {} $CHROMSIZES 2>> {}_macs2.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -231,14 +232,14 @@ function BamExtend {
       
   bedtools bamtobed -i $BAM | \
     mawk -v ext=${EXT} 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+ext,$4,$5,$6} else if($6 == "-") print $1,$3-ext,$3,$4,$5,$6}' | \
-    bedtools bedtobam -i - -g $CHROMSIZES > ${BAM%.bam}_ext${EXT}.bam
+    bedtools bedtobam -i - -g $3 > ${BAM%.bam}_ext${EXT}.bam
     
   (>&2 paste -d " " <(echo '[INFO]' 'BamExtend for' $1 'ended on') <(date))
   
 }; export -f BamExtend
   
 ls *.bam | grep -vE 'merged|_raw' | \
-  parallel "BamExtend {} 80 2>> {.}_BamExtend.log"
+  parallel "BamExtend {} 80 $CHROMSIZES 2>> {.}_BamExtend.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
