@@ -175,7 +175,7 @@ function Complexity {
   ## Create library complexity curve:
   preseq c_curve -s 5e+05 -o ${BAM%.bam}_ccurve.txt -seed 1 -bam $BAM
   
-  (>&2 paste -d " " <(echo '[INFO]' 'COMPLEXITY for' $1 'ended on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Complexity for' $1 'ended on') <(date))
     
 }; export -f Complexity
 
@@ -187,6 +187,7 @@ ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "Complexity {} {.}_complexity.log
 function PeakCall {
   
   BASENAME=$1
+  OUTNAME=${1%_DNA*}
   
   (>&2 paste -d " " <(echo '[INFO]' 'PeakCall for' $1 'started on') <(date))
   
@@ -205,7 +206,7 @@ function PeakCall {
   bedtools slop -b 80 -g $2 -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
   
-  awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
+  awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${OUTNAME}_referenceRegions.saf  
   
   (>&2 paste -d " " <(echo '[INFO]' 'PeakCall for' $1 'ended on') <(date))
 
@@ -247,12 +248,16 @@ ls *.bam | grep -vE 'merged|_raw' | \
 function CountMatrix {
   
   BASENAME=$1
-    
+  
   ## Then, use bedtools intersect to write a count matrix with header:
   function Fcount {
 
-    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}.counts \
-      ${BASENAME}*rep*sortedDup.bam ${BASENAME}*rep*sortedDeDup.bam
+    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}_Dup.counts \
+      ${BASENAME}*rep*sortedDup.bam
+      
+    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}_DeDup.counts \
+      ${BASENAME}*rep*sortedDeDup.bam  
+      
         
   }; export -f Fcount
     
@@ -260,8 +265,8 @@ function CountMatrix {
 }; export -f CountMatrix    
 
 ## CountMatrix Basename FragmentSize
-ls *.fastq.gz | awk -F "_rep" '{print $1}' | sort -k1,1 -u | \
-  'parallel "CountMatrix {} 2>> {}_countmatrix.log"
+ls *.fastq.gz | grep -v 'RNA' | awk -F "DNA" '{print $1}' | sort -k1,1 -u | \
+  parallel "CountMatrix {} 2>> {}_countmatrix.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
