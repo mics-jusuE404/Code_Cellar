@@ -202,7 +202,7 @@ function PeakCall {
   source deactivate
   
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
-  bedtools slop -b 80 -g $2" -i ${BASENAME}_summits.bed | \
+  bedtools slop -b 80 -g $2 -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
   
   awk 'OFS="\t" {print $1":"$2+1"-"$3, $1, $2+1, $3, "+"}' ${BASENAME}_referenceRegions.bed > ${BASENAME}_referenceRegions.saf  
