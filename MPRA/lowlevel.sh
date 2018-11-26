@@ -179,7 +179,7 @@ function Complexity {
     
 }; export -f Complexity
 
-ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "Complexity {} {.}_complexity.log"
+ls *DNA*.bam | grep -vE 'DeDup|raw' | parallel "Complexity {} 2>> {.}_complexity.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
@@ -249,27 +249,24 @@ function CountMatrix {
   
   BASENAME=$1
   
-  ## Then, use bedtools intersect to write a count matrix with header:
-  function Fcount {
-
-    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}_Dup.counts \
-      ${BASENAME}*rep*sortedDup.bam
+  (>&2 paste -d " " <(echo '[INFO]' 'CountMatrix for' $1 'started on') <(date))
+  
+  featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -F SAF -o ${BASENAME}_Dup.counts \
+    ${BASENAME}*rep*sortedDup.bam
       
-    featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -o ${BASENAME}_DeDup.counts \
-      ${BASENAME}*rep*sortedDeDup.bam  
-      
-        
-  }; export -f Fcount
-    
-  Fcount ${BASENAME}
+  featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -F SAF -o ${BASENAME}_DeDup.counts \
+    ${BASENAME}*rep*sortedDeDup.bam  
+   
+  (>&2 paste -d " " <(echo '[INFO]' 'CountMatrix for' $1 'ended on') <(date))  
+  
 }; export -f CountMatrix    
 
 ## CountMatrix Basename FragmentSize
-ls *.fastq.gz | grep -v 'RNA' | awk -F "DNA" '{print $1}' | sort -k1,1 -u | \
+ls *.fastq.gz | grep -v 'RNA' | awk -F "_DNA" '{print $1}' | sort -k1,1 -u | \
   parallel "CountMatrix {} 2>> {}_countmatrix.log"
 
 ####################################################################################################################################
 ####################################################################################################################################
 
 ## Bigwigs:
-ls *_.bam | grep -vE 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 8" 
+ls *.bam | grep -vE 'raw' | parallel -j 8 "bamCoverage -e 80 --normalizeUsing CPM -bs 1 --bam {} -o {.}_e80_CPM.bigwig -p 8" 
