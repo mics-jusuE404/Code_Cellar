@@ -11,11 +11,11 @@ from like `ENSXXXXXX.fastq.gz` into `[Biosample-Experiment Type-Target-BiolRep-T
 This one goes through the files and combined all technical replicates belonging to one biological replicate into one `fastq.gz`.
 For example these two files 
 
-1. `FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_TechRep1_ENCFF002AVF.fastq.gz`
+1. `FOO_ChIP-seq_H2AFZ_BiolRep1_TechRep1_ENCFF002AVF.fastq.gz`
 2. `FOO_ChIP-seq_H2AFZ_BiolRep1_TechRep2_ENCFF002AYT.fastq.gz`
 
 will become
-`FOO-LY1_ChIP-seq_H2AFZ_BiolRep1_combined.fastq.gz`
+`FOO_ChIP-seq_H2AFZ_BiolRep1_combined.fastq.gz`
 It also prints lists with all files used for combining and all those rejected due to read length.
 
 ## Fq2Bam_ChIPseqSE.sh
