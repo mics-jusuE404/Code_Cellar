@@ -80,7 +80,7 @@ function Fq2Bam {
   
   ## trim adapters, align and sort:
   cutadapt -j 4 -a $2 -m 36 --max-n 0.1 ${BASENAME}.fastq.gz | \
-    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 $3 /dev/stdin | \
+    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 $3 /dev/stdin | \
     samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
     sambamba sort -m 2G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
