@@ -22,7 +22,8 @@ function Fq2Bam {
   BASENAME=$1
  
   if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
-    echo '[ERROR] At least one input file is missing -- exiting' && exit 1
+    echo '[ERROR] At least one input files is missing -- exiting' && exit 1
+
     fi
   
   ## Nextera adapter:
@@ -34,24 +35,23 @@ function Fq2Bam {
   ####################################################################################################################################
   
   echo '#############################################################' >> ${BASENAME}.log
-  echo '[START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
   
-  seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz 2>> ${BASENAME}.log | \
-    cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - 2>> ${BASENAME}.log | \
-    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin 2>> ${BASENAME}.log | \
-    samtools fixmate -m -@ 2 -O SAM - - 2>> ${BASENAME}.log | \
-    samblaster --ignoreUnmated 2>> ${BASENAME}.log 2>> ${BASENAME}.log | \
-    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
-    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
+  seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
+    cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
+    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
+    samtools fixmate -m -@ 2 -O SAM - - | \
+    samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
+    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stding | \
+    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
         
-    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' 2>> ${BASENAME}.log | \
-      xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' 2>> ${BASENAME}.log \
-      -o ${BASENAME}_sorted.bam ${BASENAME}_raw.bam 2>> ${BASENAME}.log 
+    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+      xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' \
+      -o ${BASENAME}_sorted.bam ${BASENAME}_raw.bam 
     
-    ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat 2>> ${BASENAME}.log"
+    ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
-  echo '[END]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log
-  echo '#############################################################' >> ${BASENAME}.log
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
 }
 
 export -f Fq2Bam
@@ -78,7 +78,7 @@ export -f mtDNA
 
 ## Alignment:
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | \
-  parallel -j 4 "Fq2Bam {} && mtDNA {}"
+  parallel -j 4 "Fq2Bam {} 2>> {}.log && mtDNA {}"
   
 ## Bigwigs:
 ls *_sorted.bam | parallel -k -j 8 "bamCoverage -e --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16"  
