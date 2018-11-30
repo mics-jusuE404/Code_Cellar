@@ -252,10 +252,10 @@ function CountMatrix {
   (>&2 paste -d " " <(echo '[INFO]' 'CountMatrix for' $1 'started on') <(date))
   
   featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -F SAF -o ${BASENAME}_Dup.counts \
-    ${BASENAME}*rep*sortedDup.bam
+    ${BASENAME}*rep*sortedDup*ext*.bam
       
   featureCounts -T 8 -a ${BASENAME}_referenceRegions.saf -F SAF -o ${BASENAME}_DeDup.counts \
-    ${BASENAME}*rep*sortedDeDup.bam  
+    ${BASENAME}*rep*sortedDeDup*ext*.bam  
    
   (>&2 paste -d " " <(echo '[INFO]' 'CountMatrix for' $1 'ended on') <(date))  
   
