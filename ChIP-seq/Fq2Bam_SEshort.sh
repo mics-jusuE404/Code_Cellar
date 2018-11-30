@@ -31,33 +31,31 @@ function Fq2Bam {
   
   ####################################################################################################################################
   
-  echo '#############################################################' >> ${BASENAME}.log
-  echo '[START]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log && echo '' >> ${BASENAME}.log
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
   
   ## Map with bowtie trimming to 36bp:
-  seqtk trimfq -L 36 ${BASENAME}.fastq.gz 2>> ${BASENAME}.log | \
-    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX2} /dev/stdin 2>> ${BASENAME}.log | \
-    samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
-    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin 2>> ${BASENAME}.log | \
-    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin 2>> ${BASENAME}.log
+  seqtk trimfq -L 36 ${BASENAME}.fastq.gz | \
+    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX2} /dev/stdin | \
+    samblaster --ignoreUnmated | \
+    sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
+    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
   
   ## Remove unmapped and duplicated reads (1028):
-  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' 2>> ${BASENAME}.log | \
-    xargs sambamba view -f bam -t 8 --num-filter=0/1028 --filter='mapping_quality > 19' 2>> ${BASENAME}.log \
-    -o ${BASENAME}_sorted.bam ${BASENAME}_raw.bam 2>> ${BASENAME}.log 
+  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+    xargs sambamba view -f bam -t 8 --num-filter=0/1028 --filter='mapping_quality > 19' \
+    -o ${BASENAME}_sorted.bam ${BASENAME}_raw.bam
     
-  ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat 2>> ${BASENAME}.log"
+  ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
-  echo '[END]' $BASENAME 'on:' >> ${BASENAME}.log && date >> ${BASENAME}.log
-  
-  echo '#############################################################' >> ${BASENAME}.log
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
+    
 }
 
 export -f Fq2Bam
 
 ## Alignment:
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
-  parallel -j 4 "Fq2Bam {}"
+  parallel -j 4 "Fq2Bam {} 2>> {}.log"
   
 ## Fastqc:
 ls *_raw.bam | parallel "fastqc {}" 
