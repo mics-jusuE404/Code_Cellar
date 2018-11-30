@@ -20,3 +20,6 @@ It also prints lists with all files used for combining and all those rejected du
 
 ## Fq2Bam_ChIPseqSE.sh
 Script to align single-end `*fastq.gz`to hg38, resulting in unfiltered BAMs `*_raw.bam` and those without unmapped and duplicated reads `*_sorted.bam` plus indices, flagstats, CPM-normalized bigwigs and fastqc reports for each. Simply run `./Fq2Bam.sh` and it does the rest. Needs bowtie, fastqc, samtools, sambamba in PATH. All reads are trimmed to 36bp to avoid mappability bias for the few ENCODE datasets that have 76bp reads.
+
+## To do:
+Add a flag option to the `Fq2Bam_ChIPseqSE.sh` script that allows to specify if bowtie is used for very short reads < 50bp or BWA mem for longer things and paired-end data.
