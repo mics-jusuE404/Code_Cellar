@@ -35,15 +35,20 @@ function Fq2Bam {
   
   ## Map with bowtie trimming to 36bp:
   seqtk trimfq -L 36 ${BASENAME}.fastq.gz | \
-    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX2} /dev/stdin | \
+    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX} /dev/stdin | \
     samblaster --ignoreUnmated | \
+      tee >(sambamba flagstat /dev/stdin > ${BASENAME}_raw.flagstat) | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
   
-  ## Remove unmapped and duplicated reads (1028):
+  ## Remove unmapped and duplicated reads (1028), also index/flagstat:
   samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
     xargs sambamba view -f bam -t 8 --num-filter=0/1028 --filter='mapping_quality > 19' \
-    -o ${BASENAME}_sorted.bam ${BASENAME}_raw.bam
+      -o /dev/stdout ${BASENAME}_raw.bam | \
+        tee >(samtools index -@ 2 - ${BASENAME}_sorted.bam.bai) | \
+        tee ${BASENAME}_sorted.bam | \
+      sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_sorted.flagstat
+        
     
   ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
@@ -54,8 +59,4 @@ function Fq2Bam {
 export -f Fq2Bam
 
 ## Alignment:
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | \
-  parallel -j 4 "Fq2Bam {} 2>> {}.log"
-  
-## Fastqc:
-ls *_raw.bam | parallel "fastqc {}" 
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
