@@ -202,6 +202,11 @@ function PeakCall {
   macs2 callpeak --nomodel --extsize 80 -g hs -f BAM -n ${BASENAME} -t ${BASENAME}*rep*sortedDeDup.bam
   source deactivate
   
+  if [[ ! -e ${BASENAME}_summits.bed ]] || [[ $(wc -l ${BASENAME}_summits.bed | cut -d " " -f1) == 0 ]] ; then
+    (>&2 echo '[ERROR]' ${BASENAME}_summits.bed 'does not exist or is empty')
+    exit 1
+    fi
+    
   ## Take highly-significant summits (q < 0.001), extend by 2 times the fragment size (160bp) and write as BED:
   bedtools slop -b 80 -g $2 -i ${BASENAME}_summits.bed | \
     sort -k1,1 -k2,2n > ${BASENAME}_referenceRegions.bed
