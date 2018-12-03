@@ -104,7 +104,33 @@ function Fq2Bam {
      
   BamCheck ${BASENAME}_sorted.bam
   
+  ## Browser track:
+  bamCoverage -p 16 -e --normalizeUsing CPM -o ${BASENAME}_sorted_CPM.bigwig --bam ${BASENAME}_sorted.bam
+  
+  ## Clean up:
+  if [[ ! -d BAM_raw ]]; then
+    mkdir BAM_raw
+    mv ${BASENAME}_raw* BAM_raw; fi
+  
+  if [[ ! -d BAM_sorted ]]; then
+    mkdir BAM_sorted
+    mv ${BASENAME}_sorted* BAM_raw; fi
+  
+  if [[ ! -d fastq ]]; then
+    mkdir fastq
+    mv ${BASENAME}*.fastq.gz fastq; fi
+    
+  if [[ ! -d logs ]]; then
+    mkdir logs
+    mv ${BASENAME}*.log logs
+    mv {BASENAME}_mtDNA.txt logs; fi 
+    
+  if [[ ! -d bigwig ]]; then
+    mkdir bigwig
+    mv ${BASENAME}*bigwig bigwig; fi
+    
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
+  
 }
 
 export -f Fq2Bam
@@ -114,6 +140,3 @@ export -f Fq2Bam
 
 ## Run:
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
-  
-## Bigwigs:
-ls *_sorted.bam | parallel -k -j 8 "bamCoverage -e --normalizeUsing CPM -bs 1 --bam {} -o {.}_CPM.bigwig -p 16"  
