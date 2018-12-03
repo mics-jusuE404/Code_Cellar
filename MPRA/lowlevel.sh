@@ -235,9 +235,14 @@ function BamExtend {
     while read p
       do BamCheck $p
       done < /dev/stdin
-      
+  
+  ## Extend BAM file and also count the number of unique fragments using tee:
   bedtools bamtobed -i $BAM | \
     mawk -v ext=${EXT} 'OFS="\t" {if ($6 == "+") {print $1,$2,$2+ext,$4,$5,$6} else if($6 == "-") print $1,$3-ext,$3,$4,$5,$6}' | \
+      tee >(cut -f1-3 | \
+      uniq -c | \
+      sed -e 's/^ *//;s/ /\t/' | \
+      mawk 'OFS="\t" {print $2, $3, $4, $1}' > ${BAM%.bam}_fragmentCounts.bed) | \
     bedtools bedtobam -i - -g $3 > ${BAM%.bam}_ext${EXT}.bam
     
   (>&2 paste -d " " <(echo '[INFO]' 'BamExtend for' $1 'ended on') <(date))
