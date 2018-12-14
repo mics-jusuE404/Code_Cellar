@@ -98,7 +98,8 @@ function Fq2Bam {
       xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' \
         -o /dev/stdout ${BASENAME}_raw.bam | \
         tee ${BASENAME}_sorted.bam | \
-      sambamba flagstat -t 4 /dev/stdin > ${BASENAME}_sorted.flagstat 
+        tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_sorted.flagstat) | \
+      sambamba index -t 4 /dev/stdin ${BASENAME}_sorted.bam.bai
      
   BamCheck ${BASENAME}_sorted.bam
   
