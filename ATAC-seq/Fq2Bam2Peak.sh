@@ -2,8 +2,7 @@
 
 ######################################################################################################################################
 
-## ATAC-seq - alignment of fastq files to hg38, including adapter trimming without intermediate files
-## Assumes script in same dir as fastqs, bwa - samtools - samblaster - cutadapt in PATH
+## Script for lowlevel processing of ATAC-seq data, assuming paired-end data with names *_1.fastq.gz and *_2.fastq.gz
 
 ######################################################################################################################################
 
@@ -20,6 +19,7 @@
 ######################################################################################################################################
 ######################################################################################################################################
 
+## Exit function if BAM file looks corrupted or is missing:
 function ExitBam {
 
   (>&2 echo '[ERROR]' $1 'looks suspicious or is empty -- exiting') && exit 1
@@ -29,7 +29,7 @@ function ExitBam {
 ######################################################################################################################################
 ######################################################################################################################################
 
-## Check if BAM is corrupted or incomplete:
+## Check if BAM is corrupted or empty:
 function BamCheck {
   
   BASENAME=${1%_*}
@@ -45,22 +45,21 @@ function BamCheck {
 ######################################################################################################################################
 ######################################################################################################################################
 
+## Function to get the % of reads mapped to chrM:
 function mtDNA {
 
-  if [[ ! -e ${BASENAME}_raw.bam ]];
-      then
-      echo '[ERROR] Input BAM for mtDNA content is missing -- exit 1' && exit 1
-      fi
   
-  if [[ ! -e ${BASENAME}_raw.bam.bai ]];
+  BamCheck $1
+  
+  if [[ ! -e ${1}.bai ]];
     then
-    sambamba index ${BASENAME}_raw.bam
+    sambamba index -t 8 ${1}
     fi
     
-  mtReads=$(samtools idxstats ${BASENAME}_raw.bam | grep 'chrM' | cut -f 3)
-  totalReads=$(samtools idxstats ${BASENAME}_raw.bam | awk '{SUM += $3} END {print SUM}')
+  mtReads=$(samtools idxstats $1 | grep 'chrM' | cut -f 3)
+  totalReads=$(samtools idxstats $1 | awk '{SUM += $3} END {print SUM}')
 
-  echo '[mtDNA Content]' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%' > ${BASENAME}_mtDNA.txt
+  echo '[mtDNA Content]' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%' > ${1%.bam}_mtDNA.txt
 }; export -f mtDNA
 
 ######################################################################################################################################
@@ -81,14 +80,12 @@ function Fq2Bam {
   ADAPTER2="CTGTCTCTTATACACATCT"
   
   BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
-  
-  
-  
+    
   seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
     cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
     bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
     samtools fixmate -m -@ 2 -O SAM - - | \
-    samblaster --ignoreUnmated 2>> ${BASENAME}.log | \
+    samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
       tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
@@ -96,6 +93,7 @@ function Fq2Bam {
     BamCheck ${BASENAME}_raw.bam
     mtDNA ${BASENAME}_raw.bam
     
+    ## Remove non-primary chromosomes and duplicates:
     samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
       xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' \
         -o /dev/stdout ${BASENAME}_raw.bam | \
@@ -104,8 +102,8 @@ function Fq2Bam {
      
   BamCheck ${BASENAME}_sorted.bam
   
-  ## Browser track:
-  bamCoverage -p 16 -e --normalizeUsing CPM -o ${BASENAME}_sorted_CPM.bigwig --bam ${BASENAME}_sorted.bam
+  ## Browser track only for visualization, therefore RPM-normalized instead of using the DESeq2 scaling factor:
+  bamCoverage -bs 1 -p 16 -e --normalizeUsing CPM -o ${BASENAME}_sorted_CPM.bigwig --bam ${BASENAME}_sorted.bam
   
   ## Clean up:
   if [[ ! -d BAM_raw ]]; then
@@ -140,3 +138,8 @@ export -f Fq2Bam
 
 ## Run:
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
+
+## Call peaks with default FDR settings, can be filtered more stringently lateron:
+ls *_sorted.bam | \
+  awk -F "_sorted.bam" '{print $1}' | \
+  parallel "macs2 callpeak -f BAMPE --nomodel --keep-dup=all -g hs -n {} -t {}_sorted.bam
