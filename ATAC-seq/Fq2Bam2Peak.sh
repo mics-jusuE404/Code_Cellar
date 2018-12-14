@@ -140,6 +140,7 @@ export -f Fq2Bam
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
 
 ## Call peaks with default FDR settings, can be filtered more stringently lateron:
+source activate py27
 ls *_sorted.bam | \
   awk -F "_sorted.bam" '{print $1}' | \
-  parallel "macs2 callpeak -f BAMPE --nomodel --keep-dup=all -g hs -n {} -t {}_sorted.bam
+  parallel "macs2 callpeak -f BAMPE --nomodel --keep-dup=all -g hs -n {} -t {}_sorted.bam"
