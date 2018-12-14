@@ -107,25 +107,25 @@ function Fq2Bam {
   
   ## Clean up:
   if [[ ! -d BAM_raw ]]; then
-    mkdir BAM_raw
-    mv ${BASENAME}_raw* BAM_raw; fi
+    mkdir BAM_raw; fi
+    mv ${BASENAME}_raw* BAM_raw
   
   if [[ ! -d BAM_sorted ]]; then
-    mkdir BAM_sorted
-    mv ${BASENAME}_sorted* BAM_raw; fi
+    mkdir BAM_sorted; fi
+    mv ${BASENAME}_sorted* BAM_raw
   
   if [[ ! -d fastq ]]; then
-    mkdir fastq
-    mv ${BASENAME}*.fastq.gz fastq; fi
+    mkdir fastq; fi
+    mv ${BASENAME}*.fastq.gz fastq
     
   if [[ ! -d logs ]]; then
-    mkdir logs
+    mkdir logs; fi
     mv ${BASENAME}*.log logs
-    mv {BASENAME}_mtDNA.txt logs; fi 
+    mv {BASENAME}_mtDNA.txt logs
     
   if [[ ! -d bigwig ]]; then
-    mkdir bigwig
-    mv ${BASENAME}*bigwig bigwig; fi
+    mkdir bigwig; fi
+    mv ${BASENAME}*bigwig bigwig
     
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
   
