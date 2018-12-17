@@ -36,18 +36,18 @@ function MergeRename {
   ## If	ok, start merging if > 1 file per R1/2:
   if [[ "$(ls *${ID}*R1.fastq.gz | wc -l)" > 1 ]]; then
     echo 'Merging' $ID 'R1' >> report_merged.log
-    find . -maxdepth 1 -name "*${ID}*R1.fastq.gz" | xargs cat >	${ID}_combined_1.fastq.gz
+    find . -maxdepth 1 -name "*${ID}*R1.fastq.gz" | xargs cat >	${ID}_RNAseq_combined_1.fastq.gz
     echo 'Merging' $ID 'R2' >> report_merged.log
-    find . -maxdepth 1 -name "*${ID}*R2.fastq.gz" | xargs cat >	${ID}_combined_1.fastq.gz
+    find . -maxdepth 1 -name "*${ID}*R2.fastq.gz" | xargs cat >	${ID}_RNAseq_combined_1.fastq.gz
     echo '' >> report_merged.log
     fi
   
   ## If ok but only one file per R1/2, rename:
   if [[ "$(ls *${ID}*R1.fastq.gz | wc -l)" == 1 ]]; then
     echo 'Renaming' $ID 'R1' >> report_renamed.log
-    mv *${ID}*R1.fastq.gz ${ID}_combined_1.fastq.gz
+    mv *${ID}*R1.fastq.gz ${ID}_RNAseq_combined_1.fastq.gz
     echo 'Renaming' $ID 'R2' >> report_renamed.log
-    mv *${ID}*R2.fastq.gz ${ID}_combined_2.fastq.gz
+    mv *${ID}*R2.fastq.gz ${ID}_RNAseq_combined_2.fastq.gz
     echo '' >> report_renamed.log
     fi
     
