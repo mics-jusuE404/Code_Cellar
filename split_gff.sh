@@ -1,9 +1,7 @@
 #!/bin/bash
 
-## This script takes a gff3 and a chromSizes file and creates necessary files for the script GenomicAnnotate_run.sh
-## Means it splits the gff into single files per feature (exon, intron, intergenic, CDS, UTR, transcript, gene).
-## USAGE: 
-
+## This script takes a gff3 and a chromSizes file and extracts the sub-features in BED format:
+## (exon, intron, intergenic, CDS, UTR, transcript, gene).
 
 if [[ $# -eq 0 ]] ; then
     echo 'Usage: ./GenomicAnnotate_prepare.sh in.gff3 chromSizes.txt'
@@ -51,5 +49,3 @@ bedtools complement -i <(cat ${1%.gff3}_exon_sorted.bed ${1%.gff3}_intergenic_so
 ## of course strand specific:
 mawk 'OFS="\t" {if ($6 == "+") $3=$2+1; print $0}' ${1%.gff3}_gene_sorted.bed | mawk 'OFS="\t" {if ($6 == "-") $2=$3-1; print $0}' | \
   sort -k1,1 -k2,2n > ${1%.gff3}_gene_firstBp_sorted.bed
-
-exit 0
