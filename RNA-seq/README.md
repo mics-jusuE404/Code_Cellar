@@ -7,3 +7,5 @@ it `cat`s together all lane replicates per donor ID (here `4158726`) and per rea
 If there is only one file per donor and R1/2, simply rename the file. In the end, output for the above file would be
 `4158726_RNAseq_combined_1.fastq.gz`.
 
+## salmon_quant.sh
+Assuming paired-end fastq files `*_1.fastq.gz` & `*_2.fastq.gz`, quantify all files against Gencode transcriptome using Salmon.
