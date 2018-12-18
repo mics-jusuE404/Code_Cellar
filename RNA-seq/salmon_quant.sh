@@ -23,6 +23,7 @@ function SALMON {
   salmon quant \
     -l A -i $2 -p 8 \
     --validateMappings \
+    --maxMMPExtension 7 \
     --seqBias \
     --gcBias \
     -o ${1}_salmonK31 -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
