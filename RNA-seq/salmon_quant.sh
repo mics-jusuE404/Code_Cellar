@@ -12,7 +12,7 @@
 #######
 
 ## Use Salmon on FASTQ files, providing the basename:
-IDX="/scratch/tmp/a_toen03/Genomes/hg38/Gencode_v28/gencode.v28.salmonIDX25"
+IDX="/scratch/tmp/a_toen03/Genomes/hg38/Gencode_v28/gencode.v28.salmonIDX31"
 
 function SALMON {
   
@@ -20,7 +20,13 @@ function SALMON {
     echo '[ERROR]: At least on of the input files is missing for' $1 && exit 1
     fi
   
-  salmon quant -l A -i $2 -p 8 --validateMappings --seqBias --gcBias -o ${1}_salmonK25 -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
+  salmon quant \
+    -l A -i $2 -p 8 \
+    --validateMappings \
+    --seqBias \
+    --gcBias \
+    -o ${1}_salmonK31 -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
+  
 }; export -f SALMON
 
 ## Run salmon:
