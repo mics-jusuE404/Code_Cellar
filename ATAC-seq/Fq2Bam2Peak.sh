@@ -113,7 +113,7 @@ function Fq2Bam {
   
   if [[ ! -d BAM_sorted ]]; then
     mkdir BAM_sorted; fi
-    mv ${BASENAME}_sorted* BAM_raw
+    mv ${BASENAME}_sorted* BAM_sorted
   
   if [[ ! -d fastq ]]; then
     mkdir fastq; fi
