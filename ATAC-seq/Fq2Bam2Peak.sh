@@ -80,31 +80,55 @@ function Fq2Bam {
   ADAPTER2="CTGTCTCTTATACACATCT"
   
   BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
-    
+  HG38_BL=/scratch/tmp/a_toen03/Genomes/hg38/Blacklists/hg38_consensusBL.bed
+  
+  ###### Fancy long pipe =)
+  
+  ## interleave fastq file and remove adapters:
   seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
-    cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
+  cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
+  
+    ## align:
     bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
+    
+    ## write a BED file with the chrs to keep for later:
+    tee >(samtools view -h - | cut -f2 | grep 'SN:' | awk '{gsub("SN:", "");print}' | \
+      grep -vE 'chrM|_random|chrU|chrEBV|\*' > ${BASENAME}_chrKeep.bed)
+    
+    ## correct mate information and mark duplicates:
     samtools fixmate -m -@ 2 -O SAM - - | \
     samblaster --ignoreUnmated | \
+    
+    ## as BAM:
     sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
       tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
-    
-    BamCheck ${BASENAME}_raw.bam
-    mtDNA ${BASENAME}_raw.bam
-    
-    ## Remove non-primary chromosomes and duplicates:
-    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-      xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' \
-        -o /dev/stdout ${BASENAME}_raw.bam | \
+      
+    ## sort and write unfiltered alignments to disk:  
+    sambamba sort -m 4G --tmpdir=./ -l 0 -t 16 -o /dev/stdout /dev/stdin | \
+      tee >(sambamba view -f bam -t 2 -l 5 -o ${BASENAME}_raw.bam /dev/stdin) | \
+      
+    ## remove dups, bad MAPQ, non-primary chrs and unmapped/non-primary reads,
+    ## also, write NFR reads (TLEN < 100bp to disk):
+    sambamba view -f bam -t 4 \
+      --num-filter=1/1284 \
+      --filter='mapping_quality > 19' \
+      -L ${BASENAME}_chrKeep.bed) \
+      -o /dev/stdout /dev/stdin | \
         tee ${BASENAME}_sorted.bam | \
         tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_sorted.flagstat) | \
-      sambamba index -t 4 /dev/stdin ${BASENAME}_sorted.bam.bai
-     
-  BamCheck ${BASENAME}_sorted.bam
+        sambamba index -t 4 /dev/stdin ${BASENAME}_sorted.bam.bai 
   
-  ## Browser track only for visualization, therefore RPM-normalized instead of using the DESeq2 scaling factor:
-  bamCoverage -bs 1 -p 16 -e --normalizeUsing CPM -o ${BASENAME}_sorted_CPM.bigwig --bam ${BASENAME}_sorted.bam
+  
+  ## some integrity checks:
+  rm ${BASENAME}_chrKeep.bed
+  BamCheck ${BASENAME}_raw.bam
+  BamCheck ${BASENAME}_sorted.bam
+  mtDNA ${BASENAME}_raw.bam
+     
+  ## simple browser track, only for visualization:
+  bamCoverage -bs 1 -p 16 -e --normalizeUsing CPM -o ${BASENAME}_sorted_CPM.bigwig --bam ${BASENAME}_sorted.bam \
+    --blackListFileName $HG38_BL \
+    --skipNAs 
   
   ## Clean up:
   if [[ ! -d BAM_raw ]]; then
