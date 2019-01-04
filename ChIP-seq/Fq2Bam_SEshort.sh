@@ -47,7 +47,7 @@ function Fq2Bam {
       -o /dev/stdout ${BASENAME}_raw.bam | \
         tee >(samtools index -@ 2 - ${BASENAME}_sorted.bam.bai) | \
         tee ${BASENAME}_sorted.bam | \
-      sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_sorted.flagstat
+      samtools flagstat -@ 2 /dev/stdin > ${BASENAME}_sorted.flagstat
         
     
   ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
