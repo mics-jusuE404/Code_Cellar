@@ -37,7 +37,7 @@ function Fq2Bam {
   seqtk trimfq -L 36 ${BASENAME}.fastq.gz | \
     bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX} /dev/stdin | \
     samblaster --ignoreUnmated | \
-      tee >(sambamba flagstat /dev/stdin > ${BASENAME}_raw.flagstat) | \
+      tee >(samtools flagstat /dev/stdin > ${BASENAME}_raw.flagstat) | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin
   
