@@ -141,6 +141,7 @@ export -f Fq2Bam
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
 
 ## Call peaks with default FDR settings, can be filtered more stringently lateron:
+cd ./BAM_sorted
 source activate py27
 ls *_sorted.bam | \
   awk -F "_sorted.bam" '{print $1}' | \
