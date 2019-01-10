@@ -11,7 +11,7 @@
 #######
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=70
-#SBATCH --partition=hims
+#SBATCH --partition=normal
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
@@ -52,7 +52,7 @@ function Fq2Bam {
     
   ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
   
-  bamCoverage --normalizeUsing CPM --bam ${BASENAME}_sorted.bam -o ${BASENAME}_sorted_CPM.bigwig -bs 1 -e 500
+  bamCoverage --normalizeUsing CPM --bam ${BASENAME}_sorted.bam -o ${BASENAME}_sorted_CPM.bigwig -bs 1 -e 500 -p 16
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
     
