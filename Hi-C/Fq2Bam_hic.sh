@@ -65,4 +65,4 @@ function Fq2Bam {
 
 ######################################################################################################################################
 
-ls *.fastq.gz | awk -F ".fastq" '{print $1}' | parallel -j 2 "Fq2Bam {} 2>> {}.log"    
+ls *.fastq.gz | awk -F ".fastq" '{print $1}' | parallel -j 2 "Fq2Bam {} 2> {}.log"    
