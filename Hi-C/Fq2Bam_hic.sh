@@ -14,6 +14,32 @@
 ## Alignment of Hi-C data, each mate treated as single-end to avoid insert size issues.
 ## Runs two of the below functions in parallel per himem-normal node:
 
+######################################################################################################################################
+
+## Exit function if BAM file looks corrupted or is missing:
+function ExitBam {
+
+  (>&2 echo '[ERROR]' $1 'looks suspicious or is empty -- exiting') && exit 1
+  
+}; export -f ExitBam
+
+#####################################################################################################################################
+
+## Check if BAM is corrupted or empty:
+function BamCheck {
+  
+  BASENAME=${1%_*}
+  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam $1
+  
+  ## Also check if file is not empty:
+  if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
+    ExitBam $BASENAME
+    fi
+  
+}; export -f BamCheck 
+
+######################################################################################################################################
+
 function Fq2Bam {
 
   BASENAME=$1
@@ -42,5 +68,7 @@ function Fq2Bam {
     (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
     
     }; export -f Fq2Bam
-    
+
+######################################################################################################################################
+
 ls *.fastq.gz | awk -F ".fastq" '{print $1}' | parallel -j 2 "Fq2Bam {} 2>> {}.log"    
