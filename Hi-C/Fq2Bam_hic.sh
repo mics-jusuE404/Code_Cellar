@@ -55,7 +55,7 @@ function Fq2Bam {
   bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' \
     -t 34 ${BWA_IDX} -A1 -B4 -E50 -L0 ${BASENAME}.fastq.gz | \
     tee >(samtools flagstat -@ 2 - > ${BASENAME}_raw.flagstat) | \
-  sambamba view -l 5 -t 8 -f bam -S -o ${BASENAME}_raw.bam
+  sambamba view -l 5 -t 8 -f bam -S -o ${BASENAME}_raw.bam /dev/stdin
     
   BamCheck ${BASENAME}_sorted.bam
     
