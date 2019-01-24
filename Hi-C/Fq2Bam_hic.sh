@@ -43,6 +43,7 @@ function BamCheck {
 function Fq2Bam {
 
   BASENAME=$1
+  
   BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
@@ -51,23 +52,16 @@ function Fq2Bam {
     echo '[ERROR] Input file is missing -- exiting' && exit 1
     fi
 
-  mkdir ${BASENAME}_tmpDir
-  
-  bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 34 ${BWA_IDX} ${BASENAME}.fastq.gz | \
-    samblaster --ignoreUnmated | \
-    sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
-      tee >(samtools flagstat -@ 2 - > ${BASENAME}_sorted.flagstat) | \
-    samtools sort -l 5 -T ./${BASENAME}_tmpDir/${BASENAME}_tmp -@ 10 -m 3G | \
-      tee ${BASENAME}_sorted.bam | \
-    samtools index -@ 4 - ${BASENAME}_sorted.bam.bai
+  bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' \
+    -t 34 ${BWA_IDX} -A1 -B4 -E50 -L0 ${BASENAME}.fastq.gz | \
+    tee >(samtools flagstat -@ 2 - > ${BASENAME}_raw.flagstat) | \
+  sambamba view -l 5 -t 8 -f bam -S -o ${BASENAME}_raw.bam
     
-    rm -r ${BASENAME}_tmpDir
+  BamCheck ${BASENAME}_sorted.bam
     
-    BamCheck ${BASENAME}_sorted.bam
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
     
-    (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
-    
-    }; export -f Fq2Bam
+  }; export -f Fq2Bam
 
 ######################################################################################################################################
 
