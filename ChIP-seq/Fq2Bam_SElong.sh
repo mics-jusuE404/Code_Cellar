@@ -61,4 +61,4 @@ function Fq2Bam {
 export -f Fq2Bam
 
 ## Alignment:
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 2 "Fq2Bam {} 2>> {}.log"
