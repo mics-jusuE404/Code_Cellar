@@ -27,8 +27,14 @@ function Fq2Bam {
     echo '[ERROR] Input file is missing -- exiting' && exit 1
     fi
   
-  ALN_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bowtie_index_noALT_withDecoy/hg38_noALT_withDecoy
-  
+  if [[ ${2} == hg38 ]]; then
+    ALN_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bowtie_index_noALT_withDecoy/hg38_noALT_withDecoy; fi
+  if [[ ${2} == mm10 ]]; then
+    ALN_IDX=/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa
+    fi
+  if [[ -z ${2} ]]; then
+    (>&2 paste -d " " <(echo '[ERROR]' 'No genome selected for' $1') && exit 1; fi
+    
   ####################################################################################################################################
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
@@ -61,4 +67,4 @@ function Fq2Bam {
 export -f Fq2Bam
 
 ## Alignment:
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
