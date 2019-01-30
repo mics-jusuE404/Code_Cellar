@@ -16,6 +16,8 @@
 #SBATCH --job-name=ATACseq_Fq2Bam
 #######
 
+BASENAME=$1
+ 
 ######################################################################################################################################
 ######################################################################################################################################
 
@@ -79,8 +81,14 @@ function Fq2Bam {
   ADAPTER1="CTGTCTCTTATACACATCT"
   ADAPTER2="CTGTCTCTTATACACATCT"
   
-  BWA_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa
-    
+  if [[ ${2} == "hg38" ]]; then
+    BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+    fi
+
+  if [[ ${2} == "mm10" ]]; then
+    BWA_IDX="/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa"
+    fi  
+        
   seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
     cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
     bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
@@ -138,11 +146,11 @@ export -f Fq2Bam
 ####################################################################################################################################
 
 ## Run:
-ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} 2>> {}.log"
+ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
 
 ## Call peaks with default FDR settings, can be filtered more stringently lateron:
 cd ./BAM_sorted
 source activate py27
 ls *_sorted.bam | \
   awk -F "_sorted.bam" '{print $1}' | \
-parallel "macs2 callpeak -f BAM --extsize 150 --shift 75 --keep-dup=all -g hs -n {} -t {}_sorted.bam"
+  parallel "macs2 callpeak -f BAM --extsize 150 --shift -75 --keep-dup=all -g hs -n {} -t {}_sorted.bam"
