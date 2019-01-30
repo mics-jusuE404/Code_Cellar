@@ -153,4 +153,4 @@ cd ./BAM_sorted
 source activate py27
 ls *_sorted.bam | \
   awk -F "_sorted.bam" '{print $1}' | \
-  parallel "macs2 callpeak -f BAM --extsize 150 --shift -75 --keep-dup=all -g hs -n {} -t {}_sorted.bam"
+  parallel "macs2 callpeak -f BAM --nomodel --extsize 150 --shift -75 --keep-dup=all -g hs -n {} -t {}_sorted.bam"
