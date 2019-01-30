@@ -33,7 +33,7 @@ function Fq2Bam {
     fi
     
   if [[ ${2} == "mm10" ]]; then
-    ALN_IDX=/scratch/tmp/a_toen03/Genomes/mm10/bowtie1-idx
+    ALN_IDX=/scratch/tmp/a_toen03/Genomes/mm10/bowtie1-idx/mm10
     fi
     
   if [[ -z ${2} ]]; then
