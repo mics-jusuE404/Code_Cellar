@@ -2,7 +2,7 @@
 
 ######################################################################################################################################
 
-## ChIP-seq - alignment of single-end fastq files to hg38 assuming very short reads from ENCODE:
+## ChIP-seq - alignment of single-end fastq files:
 ## Assumes script in same dir as fastqs, bwa - samtools - samblaster - deeptools - fastqc
 ## Last update: 20.11.18
 
@@ -10,7 +10,8 @@
 
 #######
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=70
+#SBATCH --ntasks-per-node=72
+#SBATCH --mem=80G
 #SBATCH --partition=normal
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
@@ -27,21 +28,25 @@ function Fq2Bam {
     echo '[ERROR] Input file is missing -- exiting' && exit 1
     fi
   
-  if [[ ${2} == hg38 ]]; then
-    ALN_IDX=/scratch/tmp/a_toen03/Genomes/hg38/bowtie_index_noALT_withDecoy/hg38_noALT_withDecoy; fi
-  if [[ ${2} == mm10 ]]; then
+  if [[ ${2} == "hg38" ]]; then
+    ALN_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie_index_noALT_withDecoy/hg38_noALT_withDecoy"
+    fi
+    
+  if [[ ${2} == "mm10" ]]; then
     ALN_IDX=/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa
     fi
+    
   if [[ -z ${2} ]]; then
-    (>&2 paste -d " " <(echo '[ERROR]' 'No genome selected for' $1') && exit 1; fi
+    (>&2 paste -d " " <(echo '[ERROR]' 'No genome selected for' $1))
+    exit 1
+    fi
     
   ####################################################################################################################################
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
   
   ## Map with bowtie trimming to 36bp:
-  seqtk trimfq -L 36 ${BASENAME}.fastq.gz | \
-    bowtie --sam --quiet -m 1 --best --strata --threads 16 ${ALN_IDX} /dev/stdin | \
+  bowtie --sam --quiet -m 1 --best --strata --threads 32 ${ALN_IDX} ${BASENAME}.fastq.gz | \
     samblaster --ignoreUnmated | \
       tee >(samtools flagstat /dev/stdin > ${BASENAME}_raw.flagstat) | \
     sambamba view -f bam -S -l 1 -t 4 -o /dev/stdout /dev/stdin | \
@@ -58,7 +63,7 @@ function Fq2Bam {
     
   ls ${BASENAME}*.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
   
-  bamCoverage --normalizeUsing CPM --bam ${BASENAME}_sorted.bam -o ${BASENAME}_sorted_CPM.bigwig -bs 1 -e 400 -p 16
+  bamCoverage --normalizeUsing CPM --bam ${BASENAME}_sorted.bam -o ${BASENAME}_sorted_CPM.bigwig -bs 1 -e 400 -p 36
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
     
@@ -67,4 +72,4 @@ function Fq2Bam {
 export -f Fq2Bam
 
 ## Alignment:
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 2 "Fq2Bam {} hg38 2>> {}.log"
