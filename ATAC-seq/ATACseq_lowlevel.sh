@@ -108,6 +108,7 @@ function Fq2Bam {
       xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
         -o /dev/stdout ${BASENAME}_raw.bam | \
         tee ${BASENAME}_dup.bam | \
+        tee >(samtools index - > ${BASENAME}_dup.bam.bai) | \
       sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
     
     ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
@@ -143,9 +144,9 @@ source deactivate
 ## Clean up:
 if [[ ! -d BAM_raw ]]; then
   mkdir BAM_raw; fi
-  mv ${BASENAME}_raw* ./BAM_raw
+  mv ${BASENAME}*raw* ./BAM_raw
   
-if [[ ! -d BAM_sorted ]]; then
+if [[ ! -d BAM_filtered ]]; then
   mkdir BAM_sorted; fi
   mv ${BASENAME}*dup* BAM_filtered
   
