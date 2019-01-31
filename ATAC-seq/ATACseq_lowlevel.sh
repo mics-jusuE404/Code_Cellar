@@ -137,9 +137,9 @@ ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_CPM.bigwig -bs 1 -p 
 ls *_dup.bam | parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
 
 ## Insert Sizes:
-source activate R
+conda activate R
 ls *_dup.bam | parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf INCLUDE_DUPLICATES=true quiet=true"
-source deactivate
+conda deactivate
 
 ## Clean up:
 if [[ ! -d BAM_raw ]]; then
