@@ -138,7 +138,7 @@ ls *_dup.bam | parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
 
 ## Insert Sizes:
 source activate R
-ls *_dup.bam | parallel "picard CollectInsertSizeMetrics -I {} -O {.}_InsertSizes.txt -H {.}_InsertSizes.pdf"
+ls *_dup.bam | parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf INCLUDE_DUPLICATES=true quiet=true"
 source deactivate
 
 ## Clean up:
