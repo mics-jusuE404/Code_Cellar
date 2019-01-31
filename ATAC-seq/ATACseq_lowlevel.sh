@@ -3,13 +3,15 @@
 ######################################################################################################################################
 
 ## Script for lowlevel processing of ATAC-seq data, assuming paired-end data with names *_1.fastq.gz and *_2.fastq.gz
+## Don't forget to set appropriate genome version flag!
 
 ######################################################################################################################################
 
 #######
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=70
-#SBATCH --partition=hims
+#SBATCH --ntasks-per-node=72
+#SBATCH --partition=normal
+#SBATCH --mem=80G
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
@@ -103,54 +105,55 @@ function Fq2Bam {
     
     ## Remove non-primary chromosomes and duplicates:
     samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-      xargs sambamba view -f bam -t 8 --num-filter=1/1284 --filter='mapping_quality > 19' \
+      xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
         -o /dev/stdout ${BASENAME}_raw.bam | \
-        tee ${BASENAME}_sorted.bam | \
-        tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_sorted.flagstat) | \
-      sambamba index -t 4 /dev/stdin ${BASENAME}_sorted.bam.bai
-     
-  BamCheck ${BASENAME}_sorted.bam
-  
-  ## Browser track only for visualization, therefore RPM-normalized instead of using the DESeq2 scaling factor:
-  bamCoverage -bs 1 -p 16 -e --normalizeUsing CPM -o ${BASENAME}_sorted_CPM.bigwig --bam ${BASENAME}_sorted.bam
-  
-  ## Clean up:
-  if [[ ! -d BAM_raw ]]; then
-    mkdir BAM_raw; fi
-    mv ${BASENAME}_raw* BAM_raw
-  
-  if [[ ! -d BAM_sorted ]]; then
-    mkdir BAM_sorted; fi
-    mv ${BASENAME}_sorted* BAM_sorted
-  
-  if [[ ! -d fastq ]]; then
-    mkdir fastq; fi
-    mv ${BASENAME}*.fastq.gz fastq
+        tee ${BASENAME}_dup.bam | \
+      sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
     
-  if [[ ! -d logs ]]; then
-    mkdir logs; fi
-    mv ${BASENAME}*.log logs
-    mv {BASENAME}_mtDNA.txt logs
+    ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
-  if [[ ! -d bigwig ]]; then
-    mkdir bigwig; fi
-    mv ${BASENAME}*bigwig bigwig
-    
+  BamCheck ${BASENAME}_dedup.bam
+  
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
   
 }
 
-export -f Fq2Bam
-
+export -f Fq2Bam  
+  
 ####################################################################################################################################
 ####################################################################################################################################
 
-## Run:
+## fastqc:
+ls *fastq.gz | parallel "fastqc -t 2 {}"
+
+## Run pipeline:
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
 
-## Call peaks with default FDR settings, can be filtered more stringently lateron:
-cd ./BAM_sorted
-source activate py27
-ls *_sorted.bam | \
-  awk -F "_sorted.bam" '{print $1}' | \
-  parallel "macs2 callpeak -f BAM --nomodel --extsize 150 --shift -75 --keep-dup=all -g hs -n {} -t {}_sorted.bam"
+## Get browser tracks:
+ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e"
+
+## Library Complexity:
+ls *_dup.bam | parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
+
+## Insert Sizes:
+source activate R
+ls *_dup.bam | parallel "picard CollectInsertSizeMetrics -I {} -O {.}_InsertSizes.txt -H {.}_InsertSizes.pdf"
+source deactivate
+
+## Clean up:
+if [[ ! -d BAM_raw ]]; then
+  mkdir BAM_raw; fi
+  mv ${BASENAME}_raw* ./BAM_raw
+  
+if [[ ! -d BAM_sorted ]]; then
+  mkdir BAM_sorted; fi
+  mv ${BASENAME}*dup* BAM_filtered
+  
+if [[ ! -d fastq ]]; then
+  mkdir fastq; fi
+  mv ${BASENAME}*fastq* ./fastq
+    
+if [[ ! -d logs ]]; then
+  mkdir logs; fi
+  mv ${BASENAME}*.log logs
+  mv {BASENAME}_mtDNA.txt logs
