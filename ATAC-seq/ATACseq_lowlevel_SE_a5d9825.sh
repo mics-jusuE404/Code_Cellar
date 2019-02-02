@@ -104,7 +104,7 @@ function Fq2Bam {
       xargs sambamba view -l 5 -f bam -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
         -o /dev/stdout ${BASENAME}_raw.bam | \
         tee ${BASENAME}_dup.bam | \
-        tee >(samtools index - > ${BASENAME}_dup.bam.bai) | \
+        tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
       sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
     
     ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
