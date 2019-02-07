@@ -98,17 +98,21 @@ function Fq2Bam {
   ## outputting BAMs with and w/o duplicates, 
   ## also output in BED format elongated to 160bp for average fragment size
   samtools idxstats ${BASENAME}_raw.bam | tee tmp_chromSizes.txt | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-  xargs sambamba view -h -f sam -t 2 --num-filter=0/2308 --filter='mapping_quality > 19' \
+  xargs sambamba view -f bam -l 5 -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
     -o /dev/stdout ${BASENAME}_raw.bam | \
-    tee >(sam2bed --do-not-sort -R < /dev/stdin | \
-          mawk 'OFS="\t" {if ($6 == "+") print $1, $2, $2+1, $4, $5, $6} {if ($6 == "-") print $1, $3-1, $3, $4, $5, $6}' | \
-          bedtools slop -s -l 0 -r 159 -g tmp_chromSizes.txt | bgzip -@ 4 > ${BASENAME}_dup.bed.gz) | \
-  sambamba view -S -f bam -l 5 -t 6 -o /dev/stdout /dev/stdin | \
-    tee ${BASENAME}_dup.bam | \
+  tee ${BASENAME}_dup.bam | \
   sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
   
   ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
   
+  ## BED file for dup reads to be used with preseq:
+  bedtools bamtobed -i ${BASENAME}_dup.bam | \
+  mawk 'OFS="\t" {if ($6 == "+") print $1, $2, $2+1, $4, $5, $6} {if ($6 == "-") print $1, $3-1, $3, $4, $5, $6}' | \
+  bedtools slop -s -l 0 -r 159 -g tmp_chromSizes.txt | \
+  sort -S10G -k1,1 -k2,2n --parallel=16 | \
+  bgzip -@ 4 > ${BASENAME}_dup.bed.gz
+  tabix -p bed ${BASENAME}_dup.bed.gz
+    
   BamCheck ${BASENAME}_dup.bam
   
   BamCheck ${BASENAME}_dedup.bam
