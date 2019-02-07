@@ -135,7 +135,12 @@ ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
 
 ## Library Complexity for the full dataset without subsetting to peak regions:
 ls *_dup.bed.gz | awk -F ".bed" '{print $1}' | \
- parallel "bgzip -c -d -@ 8 {}.bed.gz | sort -S8G -k1,1 -k2,2n --parallel=8 | preseq c_curve -s 5e+05 -o {}.ccurve /dev/stdin"
+ parallel "zcat {}.bed.gz | preseq c_curve -s 1e+05 -o {}_ccurve.tsv /dev/stdin"
+ 
+## Individual peaks:
+conda activate py27_env
+ls *_dedup.bam | parallel "macs2 callpeak -f BAM --keep-dup=all -n {.} -g mm --nomodel --extsize 150 --shift -75 -t {}"
+conda deactivate
 
 ## Summary:
 multiqc -o multiqc_all ./
