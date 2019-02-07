@@ -142,7 +142,8 @@ ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} m
 ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_unscaled.bigwig -bs 1 -p 16 -e"
 
 ## Library Complexity:
-ls *_dup.bam | parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
+${BASENAME}_dup_bedpe.bed.gz | awk -F ".bed.gz" '{print $1}' | \
+ parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve 5e+05 -o {}_ccurve.txt /dev/stdin"
 
 ## Insert Sizes:
 conda activate R
