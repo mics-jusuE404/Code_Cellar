@@ -100,18 +100,18 @@ function Fq2Bam {
       tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
     
-    BamCheck ${BASENAME}_raw.bam
-    mtDNA ${BASENAME}_raw.bam
+  BamCheck ${BASENAME}_raw.bam
+  mtDNA ${BASENAME}_raw.bam
     
-    ## Remove non-primary chromosomes and duplicates:
-    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-      xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
-        -o /dev/stdout ${BASENAME}_raw.bam | \
-        tee ${BASENAME}_dup.bam | \
-        tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
-      sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
+  ## Remove non-primary chromosomes and duplicates:
+  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+   xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
+    -o /dev/stdout ${BASENAME}_raw.bam | \
+   tee ${BASENAME}_dup.bam | \
+   tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
+   sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
     
-    ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+  ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
   BamCheck ${BASENAME}_dedup.bam
   
@@ -128,7 +128,7 @@ export -f Fq2Bam
 ls *fastq.gz | parallel "fastqc -t 2 {}"
 
 ## Run pipeline:
-ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
+ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} mm10 2>> {}.log"
 
 ## Get browser tracks:
 ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e"
@@ -140,21 +140,3 @@ ls *_dup.bam | parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
 conda activate R
 ls *_dedup.bam | parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf quiet=true"
 conda deactivate
-
-## Clean up:
-if [[ ! -d BAM_raw ]]; then
-  mkdir BAM_raw; fi
-  mv ${BASENAME}*raw* ./BAM_raw
-  
-if [[ ! -d BAM_filtered ]]; then
-  mkdir BAM_sorted; fi
-  mv ${BASENAME}*dup* BAM_filtered
-  
-if [[ ! -d fastq ]]; then
-  mkdir fastq; fi
-  mv ${BASENAME}*fastq* ./fastq
-    
-if [[ ! -d logs ]]; then
-  mkdir logs; fi
-  mv ${BASENAME}*.log logs
-  mv {BASENAME}_mtDNA.txt logs
