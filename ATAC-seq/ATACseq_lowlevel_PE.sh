@@ -122,6 +122,7 @@ function Fq2Bam {
   mawk 'OFS="\t" {if ($1 !~ /chrM|_random|chrU|chrEBV/) print $1, $2, $6, $7, $8, $9}' | \
   sort -S10G -k1,1 -k2,2n --parallel=16 | \
   bgzip -@ 8 > ${BASENAME}_dup_bedpe.bed.gz
+  tabix -p bed ${BASENAME}_dup_bedpe.bed.gz
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
   
@@ -147,7 +148,13 @@ ls *_dup_bedpe.bed.gz | awk -F ".bed.gz" '{print $1}' | \
 ## Insert Sizes:
 ls *_dedup.bam | \
  parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
- 
+
+## Peaks for each sample:
+conda activate py27_env
+ls *dedup.bam | \
+ parallel "macs2 callpeak -t {} -n {.} -g mm --extsize 150 --shift -75 --nomodel --keep-dup=all -f BAM"
+
+## Summary report:
 multiqc -o multiqc_all ./ 
  
 
