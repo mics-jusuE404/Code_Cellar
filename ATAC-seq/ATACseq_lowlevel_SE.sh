@@ -20,7 +20,6 @@
 BASENAME=$1
  
 ######################################################################################################################################
-######################################################################################################################################
 
 ## Exit function if BAM file looks corrupted or is missing:
 function ExitBam {
@@ -29,7 +28,6 @@ function ExitBam {
   
 }; export -f ExitBam
 
-######################################################################################################################################
 ######################################################################################################################################
 
 ## Check if BAM is corrupted or empty:
@@ -46,12 +44,10 @@ function BamCheck {
 }; export -f BamCheck  
 
 ######################################################################################################################################
-######################################################################################################################################
 
 ## Function to get the % of reads mapped to chrM:
 function mtDNA {
 
-  
   BamCheck $1
   
   if [[ ! -e ${1}.bai ]];
@@ -66,60 +62,80 @@ function mtDNA {
 }; export -f mtDNA
 
 ######################################################################################################################################
-######################################################################################################################################
 
 function Fq2Bam {
-
+  #
   BASENAME=$1
-  
+  #
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
-  
+  #
   if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
     echo '[ERROR] At least one input files is missing -- exiting' && exit 1
     fi
-  
+  #
   ## Nextera adapter:
   ADAPTER1="CTGTCTCTTATACACATCT"
   
   if [[ ${2} == "hg38" ]]; then
     BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
     fi
-
+  #
   if [[ ${2} == "mm10" ]]; then
     BWA_IDX="/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa"
     fi  
-        
+  #
+  ## Alignment, save BAM with all reads included (_raw.bam)
   cutadapt -j 4 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
-    bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 ${BWA_IDX} /dev/stdin | \
-    samblaster --ignoreUnmated | \
-    sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
-      tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-    sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
-    
-    BamCheck ${BASENAME}_raw.bam
-    mtDNA ${BASENAME}_raw.bam
-    
-    ## Remove non-primary chromosomes and duplicates:
-    samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-      xargs sambamba view -l 5 -f bam -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
-        -o /dev/stdout ${BASENAME}_raw.bam | \
-        tee ${BASENAME}_dup.bam | \
-        tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
-      sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
-    
-    ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
-    
+  #
+  bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 ${BWA_IDX} /dev/stdin | \
+  #
+  samblaster --ignoreUnmated | \
+  #
+  sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
+  #
+  tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
+  #
+  sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
+  #  
+  BamCheck ${BASENAME}_raw.bam
+  #
+  mtDNA ${BASENAME}_raw.bam
+  # 
+  ## Remove non-primary chromosomes and low-quality alignments, 
+  ## outputting BAMs with and w/o duplicates, 
+  ## also output in BED format elongated to 160bp for average fragment size
+  samtools idxstats ${BASENAME}_raw.bam | tee tmp_chromSizes.txt | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+  #
+  xargs sambamba view -h -f sam -t 2 --num-filter=0/2308 --filter='mapping_quality > 19' \
+    -o /dev/stdout ${BASENAME}_raw.bam | \
+  #
+  tee >(sam2bed --do-not-sort -R < /dev/stdin | \
+        mawk 'OFS="\t" {if ($6 == "+") print $1, $2, $2+1, $4, $5, $6} {if ($6 == "-") print $1, $3-1, $3, $4, $5, $6}' | \
+        bedtools slop -s -l 0 -r 159 -g tmp_chromSizes.txt | bgzip -@ 4 > ${BASENAME}_dup.bed.gz) | \
+  #      
+  tee ${BASENAME}_dup.bam | \
+  #
+  tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
+  #
+  sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
+  #
+  ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+  #
+  BamCheck ${BASENAME}_dup.bam
+  #
   BamCheck ${BASENAME}_dedup.bam
-  
+  #
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
-  
+  #
 }
 
 export -f Fq2Bam  
   
 ####################################################################################################################################
-####################################################################################################################################
 
+function Bam2B {
+
+ ## Write the *_dup.bam as bed (or in single-end mode extended to 
 ## fastqc:
 ls *fastq.gz | parallel "fastqc -t 2 {}"
 
@@ -127,25 +143,9 @@ ls *fastq.gz | parallel "fastqc -t 2 {}"
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
 
 ## Get browser tracks:
-ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e 150"
+ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
+ parallel -j 4 "bamCoverage --bam {}_dedup.bam -o {}_dedup.bam_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e 150 2>> {}.log"
 
 ## Library Complexity:
-ls *_dup.bam | parallel "preseq c_curve -bam -s 5e+05 -o {.}_ccurve.txt {}"
-
-## Clean up:
-if [[ ! -d BAM_raw ]]; then
-  mkdir BAM_raw; fi
-  mv ${BASENAME}*raw* ./BAM_raw
-  
-if [[ ! -d BAM_filtered ]]; then
-  mkdir BAM_sorted; fi
-  mv ${BASENAME}*dup* BAM_filtered
-  
-if [[ ! -d fastq ]]; then
-  mkdir fastq; fi
-  mv ${BASENAME}*fastq* ./fastq
-    
-if [[ ! -d logs ]]; then
-  mkdir logs; fi
-  mv ${BASENAME}*.log logs
-  mv {BASENAME}_mtDNA.txt logs
+ls *_dup.bam | awk -F "_dup.bam" '{print $1}' | \
+ parallel "preseq c_curve -bam -s 5e+05 -o {}_dup_ccurve.txt {}_dup.bam"
