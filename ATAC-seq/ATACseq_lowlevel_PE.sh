@@ -117,8 +117,8 @@ function Fq2Bam {
   BamCheck ${BASENAME}_dedup.bam
   
   ## Bedpe:
-  sambamba view -f sam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' ${BASENAME}_rawbackup.bam | \
-  bedtools bamtobed -bedpe -i - | \
+  sambamba view -f bam -l 0 -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' ${BASENAME}_rawbackup.bam | \
+  bedtools bamtobed -bedpe -i - 2> /dev/null | \
   mawk 'OFS="\t" {if ($1 !~ /chrM|_random|chrU|chrEBV/) print $1, $2, $6, $7, $8, $9}' | \
   sort -S10G -k1,1 -k2,2n --parallel=16 | \
   bgzip -@ 8 > ${BASENAME}_dup_bedpe.bed.gz
@@ -129,7 +129,6 @@ function Fq2Bam {
 
 export -f Fq2Bam  
   
-####################################################################################################################################
 ####################################################################################################################################
 
 ## fastqc:
@@ -142,10 +141,10 @@ ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} m
 ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_unscaled.bigwig -bs 1 -p 16 -e"
 
 ## Library Complexity:
-${BASENAME}_dup_bedpe.bed.gz | awk -F ".bed.gz" '{print $1}' | \
- parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve 5e+05 -o {}_ccurve.txt /dev/stdin"
+ls *_dup_bedpe.bed.gz | awk -F ".bed.gz" '{print $1}' | \
+ parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve -s 5e+05 -o {}_ccurve.txt /dev/stdin"
 
 ## Insert Sizes:
-conda activate R
-ls *_dedup.bam | parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf quiet=true"
-conda deactivate
+ls *_dedup.bam | \
+ parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
+
