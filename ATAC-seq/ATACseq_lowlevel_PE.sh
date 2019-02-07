@@ -153,6 +153,7 @@ ls *_dedup.bam | \
 conda activate py27_env
 ls *dedup.bam | \
  parallel "macs2 callpeak -t {} -n {.} -g mm --extsize 150 --shift -75 --nomodel --keep-dup=all -f BAM"
+conda deactivate py27_env
 
 ## Summary report:
 multiqc -o multiqc_all ./ 
