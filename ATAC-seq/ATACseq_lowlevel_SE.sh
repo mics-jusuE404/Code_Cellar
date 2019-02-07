@@ -64,26 +64,26 @@ function mtDNA {
 ######################################################################################################################################
 
 function Fq2Bam {
-  #
+  
   BASENAME=$1
-  #
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'started on') <(date))
-  #
+  
   if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
     echo '[ERROR] At least one input files is missing -- exiting' && exit 1
     fi
-  #
+  
   ## Nextera adapter:
   ADAPTER1="CTGTCTCTTATACACATCT"
-  
+    
   if [[ ${2} == "hg38" ]]; then
     BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
     fi
-  #
+  
   if [[ ${2} == "mm10" ]]; then
     BWA_IDX="/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa"
     fi  
-  #
+  
+  
   ## Alignment, save BAM with all reads included (_raw.bam)
   cutadapt -j 4 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
   #
@@ -96,11 +96,10 @@ function Fq2Bam {
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
   #
   sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
-  #  
+    
   BamCheck ${BASENAME}_raw.bam
-  #
   mtDNA ${BASENAME}_raw.bam
-  # 
+    
   ## Remove non-primary chromosomes and low-quality alignments, 
   ## outputting BAMs with and w/o duplicates, 
   ## also output in BED format elongated to 160bp for average fragment size
@@ -113,39 +112,30 @@ function Fq2Bam {
         mawk 'OFS="\t" {if ($6 == "+") print $1, $2, $2+1, $4, $5, $6} {if ($6 == "-") print $1, $3-1, $3, $4, $5, $6}' | \
         bedtools slop -s -l 0 -r 159 -g tmp_chromSizes.txt | bgzip -@ 4 > ${BASENAME}_dup.bed.gz) | \
   #      
-  tee ${BASENAME}_dup.bam | \
-  #
-  tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
+  sambamba view -S -f bam -l 5 -t 6 -o ${BASENAME}_dup.bam /dev/stdin | \
   #
   sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
-  #
+  
   ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
-  #
   BamCheck ${BASENAME}_dup.bam
-  #
   BamCheck ${BASENAME}_dedup.bam
-  #
+  
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
-  #
-}
-
-export -f Fq2Bam  
+  
+}; export -f Fq2Bam  
   
 ####################################################################################################################################
 
-function Bam2B {
-
- ## Write the *_dup.bam as bed (or in single-end mode extended to 
 ## fastqc:
 ls *fastq.gz | parallel "fastqc -t 2 {}"
 
 ## Run pipeline:
-ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} hg38 2>> {}.log"
+ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} mm10 2>> {}.log"
 
 ## Get browser tracks:
 ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
- parallel -j 4 "bamCoverage --bam {}_dedup.bam -o {}_dedup.bam_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e 150 2>> {}.log"
+ parallel -j 4 "bamCoverage --bam {}_dedup.bam -o {}_dedup.bam_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e 160 2>> {}.log"
 
-## Library Complexity:
-ls *_dup.bam | awk -F "_dup.bam" '{print $1}' | \
- parallel "preseq c_curve -bam -s 5e+05 -o {}_dup_ccurve.txt {}_dup.bam"
+## Library Complexity for the full dataset without subsetting to peak regions:
+ls *_dup.bed.gz | awk -F ".bed" '{print $1}' | \
+ parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve -s 5e+05 -o {}.ccurve /dev/stdin"
