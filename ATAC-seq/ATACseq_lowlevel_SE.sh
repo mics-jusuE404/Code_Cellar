@@ -86,15 +86,10 @@ function Fq2Bam {
   
   ## Alignment, save BAM with all reads included (_raw.bam)
   cutadapt -j 4 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
-  #
   bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 ${BWA_IDX} /dev/stdin | \
-  #
   samblaster --ignoreUnmated | \
-  #
   sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
-  #
-  tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-  #
+    tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
   sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
     
   BamCheck ${BASENAME}_raw.bam
@@ -104,20 +99,19 @@ function Fq2Bam {
   ## outputting BAMs with and w/o duplicates, 
   ## also output in BED format elongated to 160bp for average fragment size
   samtools idxstats ${BASENAME}_raw.bam | tee tmp_chromSizes.txt | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-  #
   xargs sambamba view -h -f sam -t 2 --num-filter=0/2308 --filter='mapping_quality > 19' \
     -o /dev/stdout ${BASENAME}_raw.bam | \
-  #
-  tee >(sam2bed --do-not-sort -R < /dev/stdin | \
-        mawk 'OFS="\t" {if ($6 == "+") print $1, $2, $2+1, $4, $5, $6} {if ($6 == "-") print $1, $3-1, $3, $4, $5, $6}' | \
-        bedtools slop -s -l 0 -r 159 -g tmp_chromSizes.txt | bgzip -@ 4 > ${BASENAME}_dup.bed.gz) | \
-  #      
-  sambamba view -S -f bam -l 5 -t 6 -o ${BASENAME}_dup.bam /dev/stdin | \
-  #
+    tee >(sam2bed --do-not-sort -R < /dev/stdin | \
+          mawk 'OFS="\t" {if ($6 == "+") print $1, $2, $2+1, $4, $5, $6} {if ($6 == "-") print $1, $3-1, $3, $4, $5, $6}' | \
+          bedtools slop -s -l 0 -r 159 -g tmp_chromSizes.txt | bgzip -@ 4 > ${BASENAME}_dup.bed.gz) | \
+  sambamba view -S -f bam -l 5 -t 6 -o /dev/stdout /dev/stdin | \
+    tee ${BASENAME}_dup.bam | \
   sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
   
   ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+  
   BamCheck ${BASENAME}_dup.bam
+  
   BamCheck ${BASENAME}_dedup.bam
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
@@ -138,4 +132,7 @@ ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
 
 ## Library Complexity for the full dataset without subsetting to peak regions:
 ls *_dup.bed.gz | awk -F ".bed" '{print $1}' | \
- parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve -s 5e+05 -o {}.ccurve /dev/stdin"
+ parallel "bgzip -c -d -@ 8 {}.bed.gz | sort -S8G -k1,1 -k2,2n --parallel=8 | preseq c_curve -s 5e+05 -o {}.ccurve /dev/stdin"
+
+## Summary:
+multiqc -o multiqc_all ./
