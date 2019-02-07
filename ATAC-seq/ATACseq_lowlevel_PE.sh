@@ -97,6 +97,7 @@ function Fq2Bam {
     samtools fixmate -m -@ 2 -O SAM - - | \
     samblaster --ignoreUnmated | \
     sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
+      tee ${BASENAME}_rawbackup.bam | \
       tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
     sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
     
@@ -104,7 +105,7 @@ function Fq2Bam {
   mtDNA ${BASENAME}_raw.bam
     
   ## Remove non-primary chromosomes and duplicates:
-  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+  samtools idxstats ${BASENAME}_raw.bam | tee tmp_chromSizes.txt | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
    xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
     -o /dev/stdout ${BASENAME}_raw.bam | \
    tee ${BASENAME}_dup.bam | \
@@ -114,6 +115,13 @@ function Fq2Bam {
   ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
   BamCheck ${BASENAME}_dedup.bam
+  
+  ## Bedpe:
+  sambamba view -f sam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' ${BASENAME}_rawbackup.bam | \
+  bedtools bamtobed -bedpe -i - | \
+  mawk 'OFS="\t" {if ($1 !~ /chrM|_random|chrU|chrEBV/) print $1, $2, $6, $7, $8, $9}' | \
+  sort -S10G -k1,1 -k2,2n --parallel=16 | \
+  bgzip -@ 8 > ${BASENAME}_dup_bedpe.bed.gz
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
   
@@ -130,8 +138,8 @@ ls *fastq.gz | parallel "fastqc -t 2 {}"
 ## Run pipeline:
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} mm10 2>> {}.log"
 
-## Get browser tracks:
-ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e"
+## Get browser tracks, unscaled, will be later adjusted with DESeq2 size factors:
+ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_unscaled.bigwig -bs 1 -p 16 -e"
 
 ## Library Complexity:
 ls *_dup.bam | parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
