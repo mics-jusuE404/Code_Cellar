@@ -126,9 +126,9 @@ ls *fastq.gz | parallel "fastqc -t 2 {}"
 ## Run pipeline:
 ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | parallel -j 4 "Fq2Bam {} mm10 2>> {}.log"
 
-## Get browser tracks:
+## Get tracks, unscaled, will later be adjusted with DESeq2 size factors:
 ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
- parallel -j 4 "bamCoverage --bam {}_dedup.bam -o {}_dedup.bam_CPM.bigwig -bs 1 -p 16 --normalizeUsing CPM -e 160 2>> {}.log"
+ parallel -j 4 "bamCoverage --bam {}_dedup.bam -o {}_dedup.bam_unscaled.bigwig -bs 1 -p 16 -e 160 2>> {}.log"
 
 ## Library Complexity for the full dataset without subsetting to peak regions:
 ls *_dup.bed.gz | awk -F ".bed" '{print $1}' | \
