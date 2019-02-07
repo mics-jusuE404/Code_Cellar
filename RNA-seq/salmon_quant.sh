@@ -2,8 +2,9 @@
 
 #######
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=70
-#SBATCH --partition=hims
+#SBATCH --ntasks-per-node=72
+#SBATCH --partition=normal
+#SBATCH --mem=80G
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
@@ -12,7 +13,7 @@
 #######
 
 ## Use Salmon on FASTQ files, providing the basename:
-IDX="/scratch/tmp/a_toen03/Genomes/hg38/Gencode_v28/gencode.v28.salmonIDX31"
+IDX="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/salmonIDX_Gencode_M20_k31"
 
 function SALMON {
   
