@@ -147,4 +147,7 @@ ls *_dup_bedpe.bed.gz | awk -F ".bed.gz" '{print $1}' | \
 ## Insert Sizes:
 ls *_dedup.bam | \
  parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
+ 
+multiqc -o multiqc_all ./ 
+ 
 
