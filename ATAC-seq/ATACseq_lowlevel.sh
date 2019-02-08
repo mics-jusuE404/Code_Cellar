@@ -7,7 +7,7 @@ MODE="PE"
 
 ######################################################################################################################################
 
-## Script for lowlevel processing of ATAC-seq data, assuming paired-end data with names *_1.fastq.gz and *_2.fastq.gz
+## Script for lowlevel processing of ATAC-seq data:
 ## Don't forget to set appropriate genome version flag!
 
 ######################################################################################################################################
