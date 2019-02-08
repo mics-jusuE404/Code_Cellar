@@ -206,6 +206,20 @@ function SizeFactor {
    
 ####################################################################################################################################
 
+function Bigwig {
+
+ FILE=$1
+ MODUS=$2
+ 
+ FACTOR=$(grep $FILE sizeFactors.txt | cut -f2 | bc <<< "scale=6;$($(grep $FILE sizeFactors.txt | cut -f2)^-1")
+ 
+ if [[ $MODUS == "PE" ]]; then
+  bamCoverage --bam $FILE --scaleFactor $FACTOR -e -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
+  fi
+  
+  
+
+####################################################################################################################################
 ## fastqc:
 ls *fastq.gz | parallel "fastqc -t 2 {}"
 
