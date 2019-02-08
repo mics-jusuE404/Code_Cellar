@@ -187,9 +187,23 @@ BamCheck ${BASENAME}_dedup.bam
   
 (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
   
-}; export -f Fq2Bam 
+}; export -f Fq2Bam
 
+####################################################################################################################################
 
+function SizeFactor {
+
+ ## 500bp windows over the genome:
+ bedtools makewindows -w 500 -g tmp_chromSizes.txt | \
+ mawk 'OFS="\t" {print $1$2$3, $1, $2+1, $3, "."}' > genomewindows.saf
+   
+ ## count matrix
+ featureCounts --read2pos 5 -a tmp_windows.saf -F SAF -T 8 -o genomewindows_counts.txt *_dedup.bam
+ 
+ cat genomewindows_counts.txt | ./sizeFactors.R
+ 
+ }; export -f SizeFactor
+   
 ####################################################################################################################################
 
 ## fastqc:
@@ -211,6 +225,9 @@ if [[ $MODE == "SE" ]]; then
  fi
 
 ####################################################################################################################################
+
+## Estimate size factors:
+SizeFactor
 
 ## Get browser tracks, unscaled, will be later adjusted with DESeq2 size factors:
 if [[ $MODE != "PE" ]]; then
