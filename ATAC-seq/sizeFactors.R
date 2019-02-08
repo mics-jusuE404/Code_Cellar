@@ -17,7 +17,7 @@ counts <- data.frame(counts, rowMean = rowMeans(counts[,7:ncol(counts)]))
 counts <- counts[with(counts, order(-rowMean)),]
 
 ## top 100k regions based on rowMeans:
-counts_subset <- head(counts[,7:(ncol(counts)-1)], n=100000)
+counts_subset <- head(counts[,7:(ncol(counts)-1)], n=50000)
 
 ## size factors:
 SizeFactors <- estimateSizeFactorsForMatrix(counts = counts_subset)
