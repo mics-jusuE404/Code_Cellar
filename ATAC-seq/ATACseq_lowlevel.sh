@@ -211,13 +211,18 @@ function Bigwig {
  FILE=$1
  MODUS=$2
  
- FACTOR=$(grep $FILE sizeFactors.txt | cut -f2 | bc <<< "scale=6;$($(grep $FILE sizeFactors.txt | cut -f2)^-1")
+ ## bamCoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
+ FACTOR=$(grep $FILE sizeFactors.txt | cut -f2 | bc <<< "scale=6;$(grep $FILE sizeFactors.txt | cut -f2)^-1")
  
  if [[ $MODUS == "PE" ]]; then
   bamCoverage --bam $FILE --scaleFactor $FACTOR -e -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
   fi
   
+ if [[ $MODUS == "SE" ]]; then
+  bamCoverage --bam $FILE --scaleFactor $FACTOR -e 160 -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
+  fi
   
+ }; export -f Bigwig  
 
 ####################################################################################################################################
 ## fastqc:
@@ -243,14 +248,8 @@ if [[ $MODE == "SE" ]]; then
 ## Estimate size factors:
 SizeFactor
 
-## Get browser tracks, unscaled, will be later adjusted with DESeq2 size factors:
-if [[ $MODE != "PE" ]]; then
- ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_unscaled.bigwig -bs 1 -p 16 -e"
- fi
-
-if [[ $MODE != "SE" ]]; then
- ls *_dedup.bam | parallel -j 4 "bamCoverage --bam {} -o {.}_unscaled.bigwig -bs 1 -p 16 -e 160"
- fi
+## Get browser tracks, scaled by the size factor from deseq:
+ls *dedup.bam | parallel -j 4 "Bigwig {} $MODE"
 
 ####################################################################################################################################
 
