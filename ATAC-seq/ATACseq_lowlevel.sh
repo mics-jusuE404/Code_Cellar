@@ -187,7 +187,7 @@ BamCheck ${BASENAME}_dedup.bam
   
 (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'ended on') <(date))
   
-}; export -f Fq2Bam
+}; export -f Fq2BamSE
 
 ####################################################################################################################################
 
@@ -195,12 +195,12 @@ function SizeFactor {
 
  ## 500bp windows over the genome:
  bedtools makewindows -w 500 -g tmp_chromSizes.txt | \
- mawk 'OFS="\t" {print $1$2$3, $1, $2+1, $3, "."}' > genomewindows.saf
+ mawk 'OFS="\t" {print $1$2$3, $1, $2+1, $3, "+"}' > genome_windows.saf
    
  ## count matrix
- featureCounts --read2pos 5 -a tmp_windows.saf -F SAF -T 8 -o genomewindows_counts.txt *_dedup.bam
+ featureCounts --read2pos 5 -a genome_windows.saf -F SAF -T 8 -o genome_windows_counts.txt *_dedup.bam
  
- cat genomewindows_counts.txt | ./sizeFactors.R
+ cat genome_windows_counts.txt | ./sizeFactors.R
  
  }; export -f SizeFactor
    
@@ -225,6 +225,7 @@ function Bigwig {
  }; export -f Bigwig  
 
 ####################################################################################################################################
+
 ## fastqc:
 ls *fastq.gz | parallel "fastqc -t 2 {}"
 
