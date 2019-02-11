@@ -2,6 +2,17 @@
 
 ## Quality control and alignment of PE RNA-seq data with hisat2, RSeQC, fastqc:
 
+#######
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=72
+#SBATCH --partition=normal
+#SBATCH --mem=80G
+#SBATCH --time=48:00:00 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=a_toen03@uni-muenster.de
+#SBATCH --job-name=hisat2
+#######
+
 ################################################################################################################################################
 
 BASENAME=$1
@@ -23,18 +34,12 @@ function HisatALN {
   
   (>&2 paste -d " " <(echo '[INFO]' 'HisatALN for' $1 'started on') <(date))
   
-  ADAPTER1="AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC"
-  ADAPTER2="AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTA"
-  cutadapt -j 12 -a $ADAPTER1 -A $ADAPTER2 -m 18 --max-n 0.1 \
-    -o ${BASENAME}-trimmed-pair1.fastq.gz -p ${BASENAME}-trimmed-pair2.fastq.gz \
-    ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz
-
   hisat2 -p 12 -X 1000 \
     --known-splicesite-infile $3 \
     --summary-file ${1}_hisat2_report.log \
     -x $2 \
-    -1 ${BASENAME}-trimmed-pair1.fastq.gz \
-    -2 ${BASENAME}-trimmed-pair2.fastq.gz | \
+    -1 ${BASENAME}_1.fastq.gz \
+    -2 ${BASENAME}_2.fastq.gz | \
   samblaster | \
   sambamba view -S -f bam -l 5 -t 4 -o /dev/stdout /dev/stdin | \
   sambamba sort -m 4G --tmpdir=./ -l 6 -t 12 -o /dev/stdout /dev/stdin | \
@@ -45,7 +50,9 @@ function HisatALN {
   ## QC:
   read_distribution.py -i ${BASENAME}_sorted.bam -r $4 > ${BASENAME}_sorted_readDistro.txt
   read_duplication.py -i ${BASENAME}_sorted.bam -o ${BASENAME} -q 20
-    
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'HisatALN for' $1 'ended on') <(date))
+  
 }; export -f HisatALN 
 
 ls *.fastq.gz | parallel -j 72 "fastqc {}"
@@ -53,4 +60,4 @@ ls *.fastq.gz | parallel -j 72 "fastqc {}"
 ls *_1.fastq.gz | awk -F "_1" '{print $1}' | sort -u | \
   parallel -j 4 "HisatALN {} $HISAT2_IDX $SPLICE_FILE $GENEMODEL 2>> {}.log"
   
-  multiqc -o multiqc_all ./
+multiqc -o multiqc_all ./
