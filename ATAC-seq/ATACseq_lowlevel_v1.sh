@@ -52,10 +52,6 @@ write.table(data.frame(SizeFactors), sep="\t", col.names = F, row.names = T,
 quote = F, file = "./sizeFactors.txt")
 ' > sizeFactors.R
 
-
-
-
-
 ######################################################################################################################################
 
 ## Exit function if BAM file looks corrupted or is missing:
