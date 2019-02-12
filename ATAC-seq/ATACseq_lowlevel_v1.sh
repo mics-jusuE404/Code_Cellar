@@ -50,7 +50,7 @@ SizeFactors <- estimateSizeFactorsForMatrix(counts = counts_subset)
 ## write:
 write.table(data.frame(SizeFactors), sep="\t", col.names = F, row.names = T,
 quote = F, file = "./sizeFactors.txt")
-' > sizeFactors.R
+' > sizeFactors.R && chmod +x sizeFactors.R
 
 ######################################################################################################################################
 
