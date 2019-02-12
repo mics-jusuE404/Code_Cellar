@@ -19,6 +19,9 @@ MODE="PE"
 ## Script for lowlevel processing of ATAC-seq data:
 ## Don't forget to set appropriate genome version flag!
 
+## [SOFTWARE]: seqtk-cutadapt-bwa-samtools-samblaster-sambamba-fastqc-multiqc-picard-\
+##           : preseq-deeptools-R(deseq2,data.table)-Rscript-macs2
+
 ######################################################################################################################################
 ## print script for sizefactors:
 
