@@ -22,7 +22,7 @@ MODE="PE"
 ######################################################################################################################################
 ## print script for sizefactors:
 
-echo '
+cat <<EOF > sizeFactors.R
 ## Script to calculate DESeq2 size factors for ATAC-seq data based on a count matrix
 ## over the entire genome with 500bp windows, taking the top 100k windows based on rowMeans.
 ## File comes from stdin via the main bash script ATACseq_lowlevel(...).sh
@@ -48,7 +48,7 @@ SizeFactors <- estimateSizeFactorsForMatrix(counts = counts_subset)
 ## write:
 write.table(data.frame(SizeFactors), sep="\t", col.names = F, row.names = T,
 quote = F, file = "./sizeFactors.txt")
-' > sizeFactors.R && chmod +x sizeFactors.R
+EOF
 
 ######################################################################################################################################
 
