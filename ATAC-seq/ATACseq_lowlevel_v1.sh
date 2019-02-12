@@ -23,8 +23,6 @@ MODE="PE"
 ## print script for sizefactors:
 
 echo '
-#!/home/a/a_toen03/anaconda3_things/anaconda3/envs/R_env/bin/Rscript
-
 ## Script to calculate DESeq2 size factors for ATAC-seq data based on a count matrix
 ## over the entire genome with 500bp windows, taking the top 100k windows based on rowMeans.
 ## File comes from stdin via the main bash script ATACseq_lowlevel(...).sh
@@ -220,6 +218,7 @@ BamCheck ${BASENAME}_dedup.bam
 
 ####################################################################################################################################
 
+RSCRIPT="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 function SizeFactor {
 
  ## 500bp windows over the genome:
@@ -229,7 +228,7 @@ function SizeFactor {
  ## count matrix
  featureCounts --read2pos 5 -a genome_windows.saf -F SAF -T 8 -o genome_windows_counts.txt *_dedup.bam
  
- cat genome_windows_counts.txt | ./sizeFactors.R
+ cat genome_windows_counts.txt | $RSCRIPT sizeFactors.R
  
  }; export -f SizeFactor
    
