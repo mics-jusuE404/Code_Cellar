@@ -168,7 +168,11 @@ function Fq2BamPE {
   mtDNA ${BASENAME}_raw.bam
   
   ## 1) remove non-primary chromosomes, low qual. and non-primary alignments, but keep duplicates:
-  samtools idxstats ${BASENAME}_raw.bam | tee tmp_chromSizes.txt | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+  if [[ ! -e tmp_chromSizes.txt ]]; then
+    samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
+    fi
+    
+  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
   xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
   -o /dev/stdout ${BASENAME}_raw.bam | \
   tee ${BASENAME}_dup.bam | \
