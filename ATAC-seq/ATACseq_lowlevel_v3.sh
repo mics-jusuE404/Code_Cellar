@@ -177,7 +177,7 @@ function Fq2BamPE {
   -o /dev/stdout ${BASENAME}_raw.bam | \
   tee ${BASENAME}_dup.bam | \
   tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
-  sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o /dev/stdout /dev/stdin | \
+  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
   tee >(tee ${BASENAME}_dedup.bam | samtools index - ${BASENAME}_dedup.bam.bai) | \
   bedtools bamtobed -i - | \
   mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
@@ -246,7 +246,7 @@ function Fq2BamSE {
   xargs sambamba view -f bam -l 5 -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
   -o /dev/stdout ${BASENAME}_raw.bam | \
   tee >(tee ${BASENAME}_dup.bam | samtools index - ${BASENAME}_dup.bam.bai) | \
-  sambamba view -l 5 -f bam -t 8 --num-filter=/256 -o ${BASENAME}_dedup.bam /dev/stdin
+  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o ${BASENAME}_dedup.bam /dev/stdin
     
   ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
