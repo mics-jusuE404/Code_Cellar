@@ -300,12 +300,12 @@ function Bigwig {
     fi
    
   if [[ $MODUS == "PE" ]]; then
-  bamCoverage --bam $FILE --scaleFactor $FACTOR -e -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
-  fi
+    bamCoverage --bam $FILE --scaleFactor $FACTOR -e -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
+    fi
     
   if [[ $MODUS == "SE" ]]; then
-  bamCoverage --bam $FILE --scaleFactor $FACTOR -e 160 -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
-  fi
+    bamCoverage --bam $FILE --scaleFactor $FACTOR -e 150 -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
+    fi
   
 }; export -f Bigwig  
 
