@@ -5,12 +5,23 @@
 ## $1 is the SRRXXXXX without any _1, _2 or .fastq.gz extension and 
 ## $2 is the new name, e.g. $1=SRRXXXXX $2=stemcell_rep1
 
+## Check if renaming list is present:
 if [[ ! -f accessions2name.txt ]]; then 
   echo '[ERROR] accessions2name.txt is missing'
   paste <(echo '======>') <(echo 'accessions2name.txt must have $1=SRR & $2=new name')
   exit 1
   fi
 
+## Check if renaming list is without duplicate names:
+if [[ $(cut -f2 accessions2name.txt | \
+        awk NF | sort | uniq -c | \
+        sed 's/^[ \t]*//;s/[ \t]*$//' | cut -d " " -f1 | sort -k1,1n | tail -n 1) > 1 ]]
+  then 
+  echo '[ERROR]: accessions2.txt contains duplicate names which would overwrite some files -- exiting'
+  exit 1
+  fi
+
+## Rename:
 for i in *.fastq.gz
   do
   
