@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Extract cutting sites from ATAC-seq data (=the start and end coordinate of every fragment,
-## shited +5 if on top strand and -4 if on bottom strand,
+## shited +4 if on top strand and -5 if on bottom strand,
 ## normalize by total number of fragments and write as bigwig:
 
 SCALE=$(bc <<< "scale=6;1000000/$(sambamba view -c $1)")
