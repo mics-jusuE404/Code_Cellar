@@ -175,7 +175,7 @@ function Fq2BamPE {
   sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
   tee ${BASENAME}_rawbackup.bam | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-  sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
+  sambamba sort -m 3G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
   
   BamCheck ${BASENAME}_raw.bam
   mtDNA ${BASENAME}_raw.bam
