@@ -12,8 +12,31 @@
 #SBATCH --output=salmon_quant.log
 #######
 
+###################################################################################################################
+
 ## Use Salmon on FASTQ files, providing the basename:
 IDX="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/salmonIDX_Gencode_M20_k31"
+
+###################################################################################################################
+
+function PathCheck {
+  
+  if [[ $(command -v $1 | wc -l) == 0 ]]; then 
+    echo ${1} >> missing_tools.txt
+    fi
+  
+}; export -f PathCheck
+
+TOOLS=(salmon)
+
+for i in $(echo ${TOOLS[*]}); do
+  PathCheck $i; done
+  
+if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0 ]]; then
+  echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1
+fi
+
+###################################################################################################################
 
 function SALMON {
   
@@ -30,6 +53,8 @@ function SALMON {
     -o ${1}_salmonK31 -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
   
 }; export -f SALMON
+
+###################################################################################################################
 
 ## Run salmon:
 if [[ "$(ls *.fastq.gz 2>/dev/null | wc -l)" == 0 ]]; then
