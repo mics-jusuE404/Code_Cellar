@@ -193,7 +193,6 @@ function Fq2BamPE {
   tee >(tee ${BASENAME}_dedup.bam | samtools index - ${BASENAME}_dedup.bam.bai) | \
   bedtools bamtobed -i - | \
   mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
-  bedtools slop -b 75 -g tmp_chromSizes.txt | \
   bgzip -@ 8 > ${BASENAME}_dedup.bed.gz
   
   BamCheck ${BASENAME}_dup.bam
@@ -265,7 +264,6 @@ function Fq2BamSE {
   ## BED file for dup reads to be used with preseq:
   bedtools bamtobed -i ${BASENAME}_dup.bam | \
   mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
-  bedtools slop -b 75 -g tmp_chromSizes.txt | \
   sort -S10G -k1,1 -k2,2n --parallel=16 | \
   tee >(uniq /dev/stdin | bgzip -@ 6 > ${BASENAME}_dedup.bed.gz) | \
   bgzip -@ 6 > ${BASENAME}_dup.bed.gz
