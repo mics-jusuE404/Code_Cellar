@@ -134,10 +134,11 @@ function mtDNA {
 
 ## Function to convert uBAM to Fastq:
 function Bam2Fq {
-
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'Bam2Fq for' $1 'started on') <(date))
   BASENAME=${1%_ubam.bam}
   samtools fastq -c 1 -@ 8 -0 ${BASENAME}_singleton.fastq.gz -1 ${BASENAME}_1.fastq.gz -2 ${BASENAME}_2.fastq.gz
-  
+  (>&2 paste -d " " <(echo '[INFO]' 'Bam2Fq for' $1 'ended on') <(date))
 }; export -f Bam2Fq
    
 ######################################################################################################################################
@@ -281,6 +282,8 @@ function Fq2BamSE {
 ######################################################################################################################################
 
 function SizeFactor {
+  
+  (>&2 paste -d " " <(echo '[INFO] SizeFactor started on') <(date))
 
   ## 500bp windows over the genome:
   bedtools makewindows -w 500 -g tmp_chromSizes.txt | \
@@ -290,7 +293,9 @@ function SizeFactor {
   featureCounts --read2pos 5 -a genome_windows.saf -F SAF -T 8 -o genome_windows_counts.txt *_dedup.bam
    
   cat genome_windows_counts.txt | $RSCRIPT sizeFactors.R
- 
+  
+  (>&2 paste -d " " <(echo '[INFO] SizeFactor ended on') <(date))
+  
 }; export -f SizeFactor
    
 ####################################################################################################################################
@@ -299,7 +304,9 @@ function Bigwig {
 
   FILE=$1
   MODUS=$2
-   
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'Bigwig for' $1 'started on') <(date))
+  
   ## bamCoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
   if [[ $(cat sizeFactors.txt | wc -l | xargs) > 1 ]]; then
     FACTOR=$(grep $FILE sizeFactors.txt | cut -f2 | bc <<< "scale=6;$(grep $FILE sizeFactors.txt | cut -f2)^-1")
@@ -316,6 +323,8 @@ function Bigwig {
   if [[ $MODUS == "SE" ]]; then
     bamCoverage --bam $FILE --scaleFactor $FACTOR -e 150 -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
     fi
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'Bigwig for' $1 'ended on') <(date))
   
 }; export -f Bigwig  
 
@@ -369,13 +378,18 @@ ls *_dedup.bam | \
 
 ## Library Complexity:
 if [[ $MODE == "PE" ]]; then
+
+  (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
   ls *_dup.bed.gz | awk -F ".bed.gz" '{print $1}' | \
   parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve -s 5e+05 -o {}_ccurve.txt /dev/stdin"
+  (>&2 paste -d " " <(echo '[INFO] LibComplexity ended on') <(date))
   fi
   
 if [[ $MODE == "SE" ]]; then
+  (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
   ls *_dup.bed.gz | awk -F ".bed" '{print $1}' | \
   parallel "zcat {}.bed.gz | preseq c_curve -s 1e+05 -o {}_ccurve.tsv /dev/stdin"
+  (>&2 paste -d " " <(echo '[INFO] LibComplexity ended on') <(date))
   fi 
 
 ####################################################################################################################################
