@@ -1,6 +1,28 @@
 #!/bin/bash
 
-## Quantification of chromium scRNA-seq data with salmon/alevin to Gencode reference transcriptome:
+#!/bin/bash
+
+#######
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=72
+#SBATCH --partition=normal
+#SBATCH --mem=80G
+#SBATCH --time=48:00:00 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=a_toen03@uni-muenster.de
+#SBATCH --job-name=salmon_TXquant
+#SBATCH --output=salmon_quant.log
+#######
+
+###################################################################################################################
+
+##
+## Quantification of chromium scRNA-seq data with salmon/alevin to Gencode reference transcriptome.
+## Alevin is a (quote from abstract of preprint):
+## => a fast end-to-end pipeline to process droplet-based single cell RNA sequencing data, 
+##    which performs cell barcode detection, read mapping, unique molecular identifier deduplication, 
+##    gene count estimation, and cell barcode whitelisting
+##
 
 ###################################################################################################################
 
@@ -30,8 +52,10 @@ if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0
 
 ###################################################################################################################
 
+## Main Alevin function for 
 function ALEVIN {
   
+  BASENAME=$1
   (>&2 paste -d " " <(echo '[INFO]' 'Alevin for' $1 'started on') <(date))
   
   if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
@@ -47,5 +71,7 @@ function ALEVIN {
   
 }; export -f ALEVIN
 
-ls *:.... | parallel -j 7 "ALEVIN {BASENAME} $IDX $TX2GENE 2> {}.log"
-  
+###################################################################################################################
+
+ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | \
+  parallel -j 7 "ALEVIN {} $IDX $TX2GENE 2> {}.log"
