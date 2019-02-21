@@ -10,8 +10,8 @@
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
-#SBATCH --job-name=salmon_TXquant
-#SBATCH --output=salmon_quant.log
+#SBATCH --job-name=Alevin_scRNA
+#SBATCH --output=Alevin_Quant.log
 #######
 
 ###################################################################################################################
