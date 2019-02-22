@@ -398,7 +398,7 @@ if [[ $MODE == "SE" ]]; then
 if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
 if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
-ls *_dedup.bed.gz | awk -F "_dedup.bed.gz" '{print $1}' | \
+ls *_cutsites.bed.gz | awk -F "_dedup.bed.gz" '{print $1}' | \
   parallel "$MACS callpeak -t {}_dedup.bed.gz -n {} -g $GFLAG --extsize 150 --shift -75 --nomodel --keep-dup=all -f BED"
   
 ####################################################################################################################################
