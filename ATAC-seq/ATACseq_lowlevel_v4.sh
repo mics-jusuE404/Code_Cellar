@@ -172,10 +172,10 @@ function Fq2BamPE {
   bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
   samtools fixmate -m -@ 2 -O SAM - - | \
   samblaster --ignoreUnmated | \
-  sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
+  sambamba view -f bam -S -l 5 -t 4 -o /dev/stdout /dev/stdin | \
   tee ${BASENAME}_rawbackup.bam | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-  sambamba sort -m 3G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
+  sambamba sort -m 3G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
   
   BamCheck ${BASENAME}_raw.bam
   mtDNA ${BASENAME}_raw.bam
