@@ -65,7 +65,7 @@ function ALEVIN {
   BASENAME=$1
   
   salmon alevin -l ISR -1 ${BASENAME}_1.fastq.gz -2 ${BASENAME}_2.fastq.gz --chromium \
-    -i $2 --tgMap $3 --mrna $4 --rrna $5 -p 10 -o ${BASENAME}_alevin
+    --dumpCsvCounts -i $2 --tgMap $3 --mrna $4 --rrna $5 -p 10 -o ${BASENAME}_alevin
     
   (>&2 paste -d " " <(echo '[INFO]' 'Alevin for' $1 'ended on') <(date))  
   
