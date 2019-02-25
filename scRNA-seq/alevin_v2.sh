@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 #######
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=72
@@ -10,8 +8,8 @@
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
-#SBATCH --job-name=Alevin_scRNA
-#SBATCH --output=Alevin_Quant.log
+#SBATCH --job-name=salmon_TXquant
+#SBATCH --output=salmon_quant.log
 #######
 
 ###################################################################################################################
@@ -26,7 +24,9 @@
 
 ###################################################################################################################
 
-TX2GENE="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/gencode.vM20.Tx2Gene.txt"
+TX2GENE="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/scRNA_stuff/gencode.vM20.Tx2Gene.txt"
+MITORNA="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/scRNA_stuff/gencode.vM20_mtGenes.txt"
+RRNA="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/scRNA_stuff/gencode.vM20_rrnaGenes.txt"
 IDX="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/salmonIDX_Gencode_M20_k31"
 
 ###################################################################################################################
@@ -65,7 +65,7 @@ function ALEVIN {
   BASENAME=$1
   
   salmon alevin -l ISR -1 ${BASENAME}_1.fastq.gz -2 ${BASENAME}_2.fastq.gz --chromium \
-    -i $2 --tgMap $3 -p 10 -o ${BASENAME}_alevin
+    -i $2 --tgMap $3 --mrna $4 --rrna $5 -p 10 -o ${BASENAME}_alevin
     
   (>&2 paste -d " " <(echo '[INFO]' 'Alevin for' $1 'ended on') <(date))  
   
@@ -74,4 +74,4 @@ function ALEVIN {
 ###################################################################################################################
 
 ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | \
-  parallel -j 7 "ALEVIN {} $IDX $TX2GENE 2> {}.log"
+  parallel -j 7 "ALEVIN {} $IDX $TX2GENE $MITORNA $RRNA 2> {}.log"
