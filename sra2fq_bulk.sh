@@ -18,7 +18,7 @@
 #########################################################################################################
 
 function LoadDump {
-  prefetch -X 999999999 $1 
+  prefetch -O ./ -X 999999999 $1 
   
   if [[ -e ${1}.sra ]]; then
     parallel-fastq-dump -s ${1}.sra -t 10 -O ./ --tmpdir ./ --split-3 --gzip && rm ${1}.sra
