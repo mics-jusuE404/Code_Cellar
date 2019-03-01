@@ -199,7 +199,7 @@ function Fq2BamPE {
   
   BamCheck ${BASENAME}_dup.bam
   
-  ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+  ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
   
   BamCheck ${BASENAME}_dedup.bam
   
@@ -261,7 +261,7 @@ function Fq2BamSE {
   tee >(tee ${BASENAME}_dup.bam | samtools index - ${BASENAME}_dup.bam.bai) | \
   sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o ${BASENAME}_dedup.bam /dev/stdin
     
-  ls *dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+  ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
     
   ## BED file for dup reads to be used with preseq:
   bedtools bamtobed -i ${BASENAME}_dup.bam | \
