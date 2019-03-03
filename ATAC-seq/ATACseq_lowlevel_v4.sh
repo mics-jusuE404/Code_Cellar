@@ -146,23 +146,23 @@ function mtDNA {
   ADAPTER2="CTGTCTCTTATACACATCT"
   
   if [[ ${2} == "hg38" ]]; then
-  BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+  IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
   fi
   
   if [[ ${2} == "mm10" ]]; then
-  BWA_IDX="/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa"
+  IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
   fi  
   
   ## Fastq to raw (unfiltered) alignments:
   seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
   cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
-  bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -p -t 16 ${BWA_IDX} /dev/stdin | \
+  bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved /dev/stdin | \
   samtools fixmate -m -@ 2 -O SAM - - | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 5 -t 4 -o /dev/stdout /dev/stdin | \
   tee ${BASENAME}_rawbackup.bam | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-  sambamba sort -m 3G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
+  sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
   
   BamCheck ${BASENAME}_raw.bam
   mtDNA ${BASENAME}_raw.bam
@@ -214,22 +214,22 @@ function Fq2BamSE {
   
   if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
   echo '[ERROR] At least one input files is missing -- exiting' && exit 1
-  fi
+    fi
     
   ## Nextera adapter:
   ADAPTER1="CTGTCTCTTATACACATCT"
       
   if [[ ${2} == "hg38" ]]; then
-  BWA_IDX="/scratch/tmp/a_toen03/Genomes/hg38/bwa_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
-  fi
-    
+  IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+    fi
+  
   if [[ ${2} == "mm10" ]]; then
-  BWA_IDX="/scratch/tmp/a_toen03/Genomes/mm10/bwa_index/mm10.fa"
-  fi  
+  IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
+    fi  
     
   ## Alignment, save BAM with all reads included (_raw.bam)
   cutadapt -j 4 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
-  bwa mem -v 2 -R '@RG\tID:'${BASENAME}'_ID\tSM:'${BASENAME}'_SM\tPL:Illumina' -t 16 ${BWA_IDX} /dev/stdin | \
+  bowtie2 --very-sensitive --threads 16 -x $IDX -U /dev/stdin | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
