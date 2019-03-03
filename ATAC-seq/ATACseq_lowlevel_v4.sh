@@ -76,7 +76,7 @@ counts_subset <- head(counts[,7:(ncol(counts)-1)], n=100000)
 
 ## remove regions with rowMeans beyond the 99.9th percentile, aiming to remove artifact regions without 
 ## requiring an external blacklist:
-counts_subset <- counts_subset[which(rowMeans(counts_subset) <= quantile(rowMeans(counts_subset), .999)),]
+counts_subset <- counts_subset[which(rowMeans(counts_subset) <= quantile(rowMeans(counts_subset), .99)),]
 
 ## size factors:
 SizeFactors <- estimateSizeFactorsForMatrix(counts = counts_subset)
@@ -273,7 +273,7 @@ function SizeFactor {
 
   ## 500bp windows over the genome:
   bedtools makewindows -w 500 -g tmp_chromSizes.txt | \
-  mawk 'OFS="\t" {print $1$2$3, $1, $2+1, $3, "+"}' > genome_windows.saf
+  mawk 'OFS="\t" {print $1"_"$2"_"$3, $1, $2+1, $3, "+"}' > genome_windows.saf
      
   ## count matrix
   featureCounts --read2pos 5 -a genome_windows.saf -F SAF -T 8 -o genome_windows_counts.txt *_dedup.bam
