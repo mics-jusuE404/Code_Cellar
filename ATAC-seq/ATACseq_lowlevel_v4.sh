@@ -155,7 +155,7 @@ function mtDNA {
   
   ## Fastq to raw (unfiltered) alignments:
   seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
-  cutadapt -j 4 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
+  cutadapt -j 2 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
   bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved - | \
   samtools fixmate -m -@ 2 -O SAM - - | \
   samblaster --ignoreUnmated | \
@@ -228,7 +228,7 @@ function Fq2BamSE {
     fi  
     
   ## Alignment, save BAM with all reads included (_raw.bam)
-  cutadapt -j 4 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
+  cutadapt -j 2 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
   bowtie2 --very-sensitive --threads 16 -x $IDX -U - | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 0 -t 4 -o /dev/stdout /dev/stdin | \
