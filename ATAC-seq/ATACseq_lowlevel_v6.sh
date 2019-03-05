@@ -233,7 +233,11 @@ function Fq2BamSE {
     
   ## Remove non-primary chromosomes and low-quality alignments, 
   ## outputting BAMs with and w/o duplicates, 
-  ## also output in BED format elongated to 160bp for average fragment size
+
+  if [[ ! -e tmp_chromSizes.txt ]]; then
+    samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
+    fi
+    
   samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
   xargs sambamba view -l 5 -f bam -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
   -o /dev/stdout ${BASENAME}_raw.bam | \
