@@ -358,15 +358,15 @@ ls *_dedup.bam | \
 if [[ $MODE == "PE" ]]; then
 
   (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
-  ls *_dup.bed.gz | awk -F ".bed.gz" '{print $1}' | \
-  parallel "bgzip -c -d -@ 8 {}.bed.gz | preseq c_curve -s 5e+05 -o {}_ccurve.txt /dev/stdin"
+  ls *_dup.bam | \
+  parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
   (>&2 paste -d " " <(echo '[INFO] LibComplexity ended on') <(date))
   fi
   
 if [[ $MODE == "SE" ]]; then
   (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
-  ls *_dup.bed.gz | awk -F ".bed" '{print $1}' | \
-  parallel "zcat {}.bed.gz | preseq c_curve -s 1e+05 -o {}_ccurve.tsv /dev/stdin"
+  ls *_dup.bam | \
+  parallel "preseq c_curve -bam -s 5e+05 -o {.}_ccurve.txt {}"
   (>&2 paste -d " " <(echo '[INFO] LibComplexity ended on') <(date))
   fi 
 
