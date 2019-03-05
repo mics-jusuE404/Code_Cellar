@@ -36,7 +36,8 @@ function PathCheck {
 }; export -f PathCheck
 
 TOOLS=(cat seqtk cutadapt bwa samtools samblaster sambamba tee xargs bedtools mawk bgzip tabix \
-       sort paste featureCounts bc bamCoverage parallel fastqc picard preseq multiqc $RSCRIPT $MACS bg2bw)
+       sort paste featureCounts bc bamCoverage parallel fastqc picard preseq multiqc $RSCRIPT \
+       bigWigToBedGraph $MACS bg2bw)
 
 for i in $(echo ${TOOLS[*]}); do
   PathCheck $i; done
@@ -53,8 +54,8 @@ cat <<EOF > sizeFactors.R
 ## over the entire genome with 500bp windows, taking the top 100k windows based on rowMeans.
 ## File comes from stdin via the main bash script ATACseq_lowlevel(...).sh
 
-suppressMessages(library(DESeq2))
-suppressMessages(library(data.table))
+library(DESeq2)
+library(data.table)
  
 ## read data:
 counts <- fread('cat /dev/stdin', skip = 1, header = T, data.table = F)
@@ -160,7 +161,6 @@ function mtDNA {
   samtools fixmate -m -@ 2 -O SAM - - | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 5 -t 2 -o /dev/stdout /dev/stdin | \
-  tee ${BASENAME}_rawbackup.bam | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
   sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
   
@@ -184,23 +184,14 @@ function mtDNA {
   sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 |
   tee >(bgzip -@ 6 > ${BASENAME}_cutsites.bed.gz) | \
   bedtools genomecov -bg -i - -g tmp_chromSizes.txt | \
-  bg2bw -i /dev/stdin -c tmp_chromSizes -o ${BASENAME}_cutsites_noScale.bigwig
+  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${BASENAME}_cutsites_noScale.bigwig
   
   BamCheck ${BASENAME}_dup.bam
   
   ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
   
   BamCheck ${BASENAME}_dedup.bam
-  
-  ## Write the raw unsorted alignments to bedpe applying all filters of above but keep dups for use with preseq (library complexity).
-  ## Bed file indexed with tabix for later random access retrieval:
-  sambamba view -f bam -l 0 -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' -o /dev/stdout ${BASENAME}_rawbackup.bam | \
-  bedtools bamtobed -bedpe -i - 2> /dev/null | \
-  mawk 'OFS="\t" {if ($1 !~ /chrM|_random|chrU|chrEBV/) print $1, $2, $6, $7, $8, $9}' | \
-  sort -S10G -k1,1 -k2,2n --parallel=16 | \
-  bgzip -@ 8 > ${BASENAME}_dup.bed.gz
-  tabix -p bed ${BASENAME}_dup.bed.gz
-  
+    
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2BamPE for' $1 'ended on') <(date))
 
 }
@@ -257,7 +248,7 @@ function Fq2BamSE {
   sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 |
   tee >(bgzip -@ 6 > ${BASENAME}_cutsites.bed.gz) | \
   bedtools genomecov -bg -i - -g tmp_chromSizes.txt | \
-  bg2bw -i /dev/stdin -c tmp_chromSizes -o ${BASENAME}_cutsites_noScale.bigwig
+  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${BASENAME}_cutsites_noScale.bigwig
       
   BamCheck ${BASENAME}_dup.bam
     
@@ -291,9 +282,8 @@ function SizeFactor {
 function Bigwig {
 
   FILE=$1
-  MODUS=$2
-  
-  (>&2 paste -d " " <(echo '[INFO]' 'Bigwig for' $1 'started on') <(date))
+    
+  (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' $1 'started on') <(date))
   
   ## bamCoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
   if [[ $(cat sizeFactors.txt | wc -l | xargs) > 1 ]]; then
@@ -303,16 +293,14 @@ function Bigwig {
   if [[ $(cat sizeFactors.txt | wc -l | xargs) == 1 ]]; then
     FACTOR=1
     fi
-   
-  if [[ $MODUS == "PE" ]]; then
-    bamCoverage --bam $FILE --scaleFactor $FACTOR -e -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
-    fi
-    
-  if [[ $MODUS == "SE" ]]; then
-    bamCoverage --bam $FILE --scaleFactor $FACTOR -e 150 -o ${FILE%.bam}_geoMean.bigwig -p 16 -bs 1
-    fi
   
-  (>&2 paste -d " " <(echo '[INFO]' 'Bigwig for' $1 'ended on') <(date))
+  ## Bigwig with 80bp fragments to smooth the signal:
+  bigWigToBedGraph $FILE /dev/stdout | \
+  bedtools slop -b 40 -g tmp_chromSizes.txt -i - | \
+  bedtools genomecov -g tmp_chromSizes.txt -i - -bg -scale ${FACTOR} | \
+  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${FILE%_noScale.bigwig}_geomean.bigwig
+  
+  (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' $1 'ended on') <(date))
   
 }; export -f Bigwig  
 
@@ -339,12 +327,12 @@ if [[ $MODE == "SE" ]]; then
 ####################################################################################################################################
 
 ## Estimate size factors:
-SizeFactor
+SizeFactor 2> sizeFactors.log
 
 ####################################################################################################################################
 
 ## Get browser tracks, scaled by the size factor from deseq:
-ls *dedup.bam | parallel -j 4 "Bigwig {} $MODE"
+ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {}"
 
 ####################################################################################################################################
 
