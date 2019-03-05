@@ -234,22 +234,22 @@ function Fq2BamSE {
   ## Remove non-primary chromosomes and low-quality alignments, 
   ## outputting BAMs with and w/o duplicates, 
   ## also output in BED format elongated to 160bp for average fragment size
-  samtools idxstats ${BASENAME}_raw.bam | tee tmp_chromSizes.txt | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-  xargs sambamba view -f bam -l 5 -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
+  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+  xargs sambamba view -l 5 -f bam -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
   -o /dev/stdout ${BASENAME}_raw.bam | \
-  tee >(tee ${BASENAME}_dup.bam | samtools index - ${BASENAME}_dup.bam.bai) | \
-  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o ${BASENAME}_dedup.bam /dev/stdin
-    
-  ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
-    
-  ## BED file for dup reads to be used with preseq:
-  bedtools bamtobed -i ${BASENAME}_dup.bam | \
+  tee ${BASENAME}_dup.bam | \
+  tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
+  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
+  tee >(tee ${BASENAME}_dedup.bam | samtools index - ${BASENAME}_dedup.bam.bai) | \
+  bedtools bamtobed -i - | \
   mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
   sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 |
   tee >(bgzip -@ 6 > ${BASENAME}_cutsites.bed.gz) | \
   bedtools genomecov -bg -i - -g tmp_chromSizes.txt | \
   bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${BASENAME}_cutsites_noScale.bigwig
-      
+    
+  ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+
   BamCheck ${BASENAME}_dup.bam
     
   BamCheck ${BASENAME}_dedup.bam
