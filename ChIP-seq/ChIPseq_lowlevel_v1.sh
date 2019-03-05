@@ -2,6 +2,20 @@
 
 ######################################################################################################################################
 
+#######
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=72
+#SBATCH --mem=60G
+#SBATCH --partition=normal
+#SBATCH --time=48:00:00 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=a_toen03@uni-muenster.de
+#SBATCH --job-name=ChIPseq_Align
+#SBATCH --output=Fq2Bam.log
+#######
+
+######################################################################################################################################
+
 ## ChIP-seq - alignment of single-end fastq files:
 ## Assumes script in same dir as fastqs, bwa - samtools - samblaster - deeptools - fastqc
 ## Last update: 20.11.18
@@ -10,18 +24,6 @@
 
 GENOME="mm10"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
-
-#######
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=72
-#SBATCH --mem=80G
-#SBATCH --partition=normal
-#SBATCH --time=48:00:00 
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=a_toen03@uni-muenster.de
-#SBATCH --job-name=ChIPseq_Align
-#SBATCH --output=Fq2Bam.log
-#######
 
 function Fq2Bam {
 
