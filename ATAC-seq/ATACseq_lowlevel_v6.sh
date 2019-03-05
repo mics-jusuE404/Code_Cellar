@@ -287,7 +287,8 @@ function Bigwig {
   
   ## bamCoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
   if [[ $(cat sizeFactors.txt | wc -l | xargs) > 1 ]]; then
-    FACTOR=$(grep $FILE sizeFactors.txt | cut -f2 | bc <<< "scale=6;$(grep $FILE sizeFactors.txt | cut -f2)^-1")
+    FACTOR=$(grep ${FILE%_cutsites*}_dedup.bam sizeFactors.txt | \
+             cut -f2 | bc <<< "scale=6;$(grep ${FILE%_cutsites*}_dedup.bam sizeFactors.txt | cut -f2)^-1")
     fi
     
   if [[ $(cat sizeFactors.txt | wc -l | xargs) == 1 ]]; then
