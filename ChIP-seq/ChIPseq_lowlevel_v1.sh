@@ -25,6 +25,28 @@
 GENOME="mm10"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
+## Check if required tools are in PATH:
+if [[ -e missing_tools.txt ]]; then rm missing_tools.txt; fi
+
+function PathCheck {
+  
+  if [[ $(command -v $1 | wc -l) == 0 ]]; then 
+    echo ${1} >> missing_tools.txt
+    fi
+  
+}; export -f PathCheck
+
+TOOLS=(fastqc bowtie samtools samblaster sambamba bedtools $MACS bamCoverage)
+
+for i in $(echo ${TOOLS[*]}); do
+  PathCheck $i; done
+  
+if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0 ]]; then
+  echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1
+  fi
+
+######################################################################################################################################
+
 function Fq2Bam {
 
   BASENAME=$1
