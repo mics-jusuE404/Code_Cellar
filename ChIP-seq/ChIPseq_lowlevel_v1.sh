@@ -23,7 +23,7 @@
 ######################################################################################################################################
 
 GENOME="mm10"
-MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
+MACS2="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
 ## Check if required tools are in PATH:
 if [[ -e missing_tools.txt ]]; then rm missing_tools.txt; fi
