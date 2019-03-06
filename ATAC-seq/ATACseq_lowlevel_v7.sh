@@ -311,6 +311,25 @@ function Bigwig {
 
 ####################################################################################################################################
 
+## Function to count reads in a 500bp window around called peak summits:
+function FRiP {
+  
+  PEAKS=$1
+  CUTSITES=$2
+  
+  if [[ -e $1 ]] && [[ -e $2 ]]; then
+    TOTAL=$(zcat $CUTSITES | wc -l)
+    READ=$(bedtools intersect \
+           -a $CUTSITES \
+           -b <(bedtools slop -b 250 -g tmp_chromSizes.txt -i $PEAKS | sort -k1,1 -k2,2n)\
+           -wa -sorted | wc -l)
+     paste <(echo $2) <(bc <<< "scale=6;$READ/$TOTAL") 
+     fi
+
+}; export -f FRiP
+
+####################################################################################################################################
+
 ## fastqc:
 ls *fastq.gz | parallel -j 70 "fastqc -t 1 {}"
 
@@ -374,6 +393,13 @@ if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
   parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {} -g $GFLAG \
                            --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
+
+####################################################################################################################################
+
+## FRiP:
+ls *cutsites.bed.gz | \
+  awk -F "_cutsites.bed.gz" '{print $1}' | \
+  parallel "FRIP {}_summits.bed {}_cutsites.bed.gz" > FRiP_scores.txt
 
 ####################################################################################################################################
 
