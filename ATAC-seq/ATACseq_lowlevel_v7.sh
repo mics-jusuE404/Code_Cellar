@@ -37,7 +37,7 @@ function PathCheck {
 
 TOOLS=(cat seqtk cutadapt bwa samtools samblaster sambamba tee xargs bedtools mawk bgzip tabix \
        sort paste featureCounts bc bamCoverage parallel fastqc picard preseq multiqc $RSCRIPT \
-       bigWigToBedGraph $MACS bg2bw)
+       bigWigToBedGraph $MACS bg2bw pigz)
 
 for i in $(echo ${TOOLS[*]}); do
   PathCheck $i; done
@@ -318,12 +318,12 @@ function FRiP {
   CUTSITES=$2
   
   if [[ -e $1 ]] && [[ -e $2 ]]; then
-    TOTAL=$(zcat $CUTSITES | wc -l)
+    TOTAL=$(pigz -c -d -p 4 $CUTSITES | wc -l)
     READ=$(bedtools intersect \
            -a $CUTSITES \
            -b <(bedtools slop -b 250 -g tmp_chromSizes.txt -i $PEAKS | sort -k1,1 -k2,2n)\
            -wa -sorted | wc -l)
-     paste <(echo $2) <(bc <<< "scale=6;$READ/$TOTAL") 
+     paste <(echo ${2%_cutsites.bed.gz}) <(bc <<< "scale=6;$READ/$TOTAL") 
      fi
 
 }; export -f FRiP
@@ -397,9 +397,13 @@ ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
 ####################################################################################################################################
 
 ## FRiP:
+(>&2 paste -d " " <(echo '[INFO] FRiP score calculation started on') <(date))
+
 ls *cutsites.bed.gz | \
   awk -F "_cutsites.bed.gz" '{print $1}' | \
-  parallel "FRIP {}_summits.bed {}_cutsites.bed.gz" > FRiP_scores.txt
+  parallel "FRiP {}_summits.bed {}_cutsites.bed.gz" > FRiP_scores.txt
+  
+(>&2 paste -d " " <(echo '[INFO] FRiP score calculation endedn on') <(date))
 
 ####################################################################################################################################
 
