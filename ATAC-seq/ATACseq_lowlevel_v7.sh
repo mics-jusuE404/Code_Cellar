@@ -19,6 +19,8 @@
 
 GENOME="mm10"
 MODE="PE"
+BLACKLIST="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
+##
 RSCRIPT="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
@@ -311,6 +313,22 @@ function Bigwig {
 
 ####################################################################################################################################
 
+## Peak calling with Genrich:
+function GenR {
+
+  BASENAME=$1
+  QVAL=$2
+  BLACKLIST=$3
+  
+  sambamba sort --tmpdir=./ -n -t 2 -m 3G -o /dev/stdout ${BASENAME}_dedup.bam | \
+  tee ${BASENAME}_dedup_nsort.bam | \
+  Genrich -t - -o /dev/stdout -E $BLACKLIST -j -q $QVAL | \
+  sort -k1,1 -k2,2n > {}_peaks_Genrich.narrowPeak
+
+}; export -f GenR
+
+####################################################################################################################################
+
 ## Function to count reads in a 500bp window around called peak summits:
 function FRiP {
   
@@ -321,13 +339,20 @@ function FRiP {
     TOTAL=$(pigz -c -d -p 4 $CUTSITES | wc -l)
     READ=$(bedtools intersect \
            -a $CUTSITES \
-           -b <(bedtools slop -b 250 -g tmp_chromSizes.txt -i $PEAKS | sort -k1,1 -k2,2n)\
+           -b $PEAKS -u \
            -wa -sorted | wc -l)
      paste <(echo ${2%_cutsites.bed.gz}) <(bc <<< "scale=6;$READ/$TOTAL") 
      fi
 
 }; export -f FRiP
 
+####################################################################################################################################
+####################################################################################################################################
+
+####################################################################################################################################
+####################################################################################################################################
+
+####################################################################################################################################
 ####################################################################################################################################
 
 ## fastqc:
@@ -386,13 +411,24 @@ if [[ $MODE == "SE" ]]; then
 
 ####################################################################################################################################
 
+## Deprecated from v8 on, now use Genrich 8https://github.com/jsh58/Genrich/releases)
 ## Peaks for each sample:
-if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
-if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
+## if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
+## if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
-ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
-  parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {} -g $GFLAG \
-                           --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
+## ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
+##   parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {} -g $GFLAG \
+##                           --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
+
+####################################################################################################################################
+
+## Call peaks on individual replicates, excluding blacklisted regions and at 1% FDR:
+(>&2 paste -d " " <(echo '[INFO] Peak Calling started on') <(date))
+
+ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
+  parallel -j 32 "GenR {} 0.01 $BLACKLIST"
+  
+(>&2 paste -d " " <(echo '[INFO] Peak Calling ended on') <(date))
 
 ####################################################################################################################################
 
@@ -401,7 +437,7 @@ ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
 
 ls *cutsites.bed.gz | \
   awk -F "_cutsites.bed.gz" '{print $1}' | \
-  parallel "FRiP {}_summits.bed {}_cutsites.bed.gz" > FRiP_scores.txt
+  parallel "FRiP {}_peaks_Genrich.narrowPeak {}_cutsites.bed.gz" > FRiP_scores.txt
   
 (>&2 paste -d " " <(echo '[INFO] FRiP score calculation endedn on') <(date))
 
