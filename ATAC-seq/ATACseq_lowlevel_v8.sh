@@ -320,9 +320,9 @@ function GenR {
   QVAL=$2
   BLACKLIST=$3
   
-  sambamba sort --tmpdir=./ -n -t 2 -m 3G -o /dev/stdout ${BASENAME}_dedup.bam | \
+  sambamba sort --tmpdir=./ -n -t 8 -m 5G -o /dev/stdout ${BASENAME}_dedup.bam | \
   tee ${BASENAME}_dedup_nsort.bam | \
-  Genrich -t - -o /dev/stdout -E $BLACKLIST -j -q $QVAL | \
+  Genrich -y -t - -o /dev/stdout -E $BLACKLIST -j -q $QVAL | \
   sort -k1,1 -k2,2n > {}_peaks_Genrich.narrowPeak
 
 }; export -f GenR
@@ -426,7 +426,7 @@ if [[ $MODE == "SE" ]]; then
 (>&2 paste -d " " <(echo '[INFO] Peak Calling started on') <(date))
 
 ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
-  parallel -j 32 "GenR {} 0.01 $BLACKLIST"
+  parallel -j 8 "GenR {} 0.01 $BLACKLIST"
   
 (>&2 paste -d " " <(echo '[INFO] Peak Calling ended on') <(date))
 
