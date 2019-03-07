@@ -313,35 +313,6 @@ function Bigwig {
 
 ####################################################################################################################################
 
-## Peak calling with Genrich:
-function GenR {
-
-  BASENAME=$1
-  QVAL=$2
-  BLACKLIST=$3
-  MODE=$4
-  
-  ## If paired-end collate the BAM and manually edit the header to trick Genrich:
-  if [[ $MODE == "PE" ]]; then
-    bamcollate2 level=0 T=${BASENAME}_tmp_biobambam outputformat=sam \
-    filename=${BASENAME}_dedup.bam | \
-    mawk 'OFS="\t" {if ($1 ~ /^@HD/ && NR == 1) print $1, $2, "SO:queryname"; else print}' | \
-    Genrich -y -t - -o - -E $BLACKLIST -j -q $QVAL | \
-    sort -k1,1 -k2,2n > ${BASENAME}_peaks_Genrich.narrowPeak
-    fi
-  
-  ## If single-end simply edit the header to trick Genrich:
-  if [[ $MODE == "SE" ]]; then
-    samtools view -h ${BASENAME}_dedup.bam | \
-    mawk 'OFS="\t" {if ($1 ~ /^@HD/ && NR == 1) print $1, $2, "SO:queryname"; else print}' | \
-    Genrich -y -t - -o - -E $BLACKLIST -j -q $QVAL | \
-    sort -k1,1 -k2,2n > ${BASENAME}_peaks_Genrich.narrowPeak
-    fi  
-
-}; export -f GenR
-
-####################################################################################################################################
-
 ## Count fraction of cutting sites in Genrich peaks:
 function FRiP {
   
@@ -418,24 +389,13 @@ if [[ $MODE == "SE" ]]; then
 
 ####################################################################################################################################
 
-## Deprecated from v8 on, now use Genrich 8https://github.com/jsh58/Genrich/releases)
 ## Peaks for each sample:
-## if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
-## if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
+if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
+if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
-## ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
-##   parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {} -g $GFLAG \
-##                           --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
-
-####################################################################################################################################
-
-## Call peaks on individual replicates, excluding blacklisted regions and at 1% FDR:
-(>&2 paste -d " " <(echo '[INFO] Peak Calling started on') <(date))
-
-ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
-  parallel -j 8 "GenR {} 0.01 $BLACKLIST $MODE"
-  
-(>&2 paste -d " " <(echo '[INFO] Peak Calling ended on') <(date))
+ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
+  parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {} -g $GFLAG \
+                  --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
 
 ####################################################################################################################################
 
@@ -444,7 +404,7 @@ ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
 
 ls *cutsites.bed.gz | \
   awk -F "_cutsites.bed.gz" '{print $1}' | \
-  parallel "FRiP {}_peaks_Genrich.narrowPeak {}_cutsites.bed.gz" > FRiP_scores.txt
+  parallel "FRiP {}_peaks_.narrowPeak {}_cutsites.bed.gz" > FRiP_scores.txt
   
 (>&2 paste -d " " <(echo '[INFO] FRiP score calculation endedn on') <(date))
 
