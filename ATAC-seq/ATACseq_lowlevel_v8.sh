@@ -39,7 +39,7 @@ function PathCheck {
 
 TOOLS=(cat seqtk cutadapt bwa samtools samblaster sambamba tee xargs bedtools mawk bgzip tabix \
        sort paste featureCounts bc bamCoverage parallel fastqc picard preseq multiqc $RSCRIPT \
-       bigWigToBedGraph $MACS bg2bw pigz)
+       bigWigToBedGraph $MACS bg2bw pigz bamcollate2)
 
 for i in $(echo ${TOOLS[*]}); do
   PathCheck $i; done
@@ -319,18 +319,30 @@ function GenR {
   BASENAME=$1
   QVAL=$2
   BLACKLIST=$3
+  MODE=$4
   
-  sambamba sort --tmpdir=./ -n -t 8 -m 6G -o /dev/stdout ${BASENAME}_dedup.bam | \
-  tee ${BASENAME}_dedup_nsort.bam | \
-  samtools view -@ 2 -h -O SAM | \
-  Genrich -y -t - -o - -E $BLACKLIST -j -q $QVAL | \
-  sort -k1,1 -k2,2n > ${BASENAME}_peaks_Genrich.narrowPeak
+  ## If paired-end collate the BAM and manually edit the header to trick Genrich:
+  if [[ $MODE == "PE" ]]; then
+    bamcollate2 level=0 T=${BASENAME}_tmp_biobambam outputformat=sam \
+    filename=${BASENAME}_dedup.bam | \
+    mawk 'OFS="\t" {if ($1 ~ /^@HD/ && NR == 1) print $1, $2, "SO:queryname"; else print}' | \
+    Genrich -y -t - -o - -E $BLACKLIST -j -q $QVAL | \
+    sort -k1,1 -k2,2n > ${BASENAME}_peaks_Genrich.narrowPeak
+    fi
+  
+  ## If single-end simply edit the header to trick Genrich:
+  if [[ $MODE == "SE" ]]; then
+    samtools view -h ${BASENAME}_dedup.bam | \
+    mawk 'OFS="\t" {if ($1 ~ /^@HD/ && NR == 1) print $1, $2, "SO:queryname"; else print}' | \
+    Genrich -y -t - -o - -E $BLACKLIST -j -q $QVAL | \
+    sort -k1,1 -k2,2n > ${BASENAME}_peaks_Genrich.narrowPeak
+    fi  
 
 }; export -f GenR
 
 ####################################################################################################################################
 
-## Function to count reads in a 500bp window around called peak summits:
+## Count fraction of cutting sites in Genrich peaks:
 function FRiP {
   
   PEAKS=$1
@@ -348,13 +360,19 @@ function FRiP {
 }; export -f FRiP
 
 ####################################################################################################################################
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
+#                                                                                                                                  #
 ####################################################################################################################################
-
-####################################################################################################################################
-####################################################################################################################################
-
-####################################################################################################################################
-####################################################################################################################################
+##
+## Execute functions:
+##
 
 ## fastqc:
 ls *fastq.gz | parallel -j 70 "fastqc -t 1 {}"
@@ -427,7 +445,7 @@ if [[ $MODE == "SE" ]]; then
 (>&2 paste -d " " <(echo '[INFO] Peak Calling started on') <(date))
 
 ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | \
-  parallel -j 8 "GenR {} 0.01 $BLACKLIST"
+  parallel -j 8 "GenR {} 0.01 $BLACKLIST $MODE"
   
 (>&2 paste -d " " <(echo '[INFO] Peak Calling ended on') <(date))
 
