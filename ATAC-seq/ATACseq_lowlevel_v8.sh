@@ -360,26 +360,13 @@ function FRiP {
 }; export -f FRiP
 
 ####################################################################################################################################
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-#                                                                                                                                  #
-####################################################################################################################################
-##
-## Execute functions:
-##
 
 ## fastqc:
 ls *fastq.gz | parallel -j 70 "fastqc -t 1 {}"
 
 ####################################################################################################################################
 
-## Run pipeline:
+## Aln/filtering:
 if [[ $MODE != "PE" ]] && [[ $MODE != "SE" ]]; then
   echo '[ERROR] Missing SE/PE information in Fq2Bam function -- exiting'
   exit 1; fi
@@ -404,17 +391,18 @@ ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {}"
 
 ####################################################################################################################################
 
-## Insert Sizes:
+## Insert Sizes given paired-end data:
 if [[ $MODE == "PE" ]]; then
+(>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
 ls *_dedup.bam | \
   parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
+  (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
   fi
 
 ####################################################################################################################################
 
 ## Library Complexity:
 if [[ $MODE == "PE" ]]; then
-
   (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
   ls *_dup.bam | \
   parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
@@ -463,4 +451,6 @@ ls *cutsites.bed.gz | \
 ####################################################################################################################################
 
 ## Summary report:
+(>&2 paste -d " " <(echo '[INFO] MultiQC started on') <(date))
 multiqc -o multiqc_all ./ 
+(>&2 paste -d " " <(echo '[INFO] MultiQC ended on') <(date))
