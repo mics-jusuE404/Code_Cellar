@@ -323,7 +323,7 @@ function GenR {
   sambamba sort --tmpdir=./ -n -t 8 -m 6G -o /dev/stdout ${BASENAME}_dedup.bam | \
   tee ${BASENAME}_dedup_nsort.bam | \
   samtools view -@ 2 -h -O SAM | \
-  Genrich -y -t - -o /dev/stdout -E $BLACKLIST -j -q $QVAL | \
+  Genrich -y -t - -o - -E $BLACKLIST -j -q $QVAL | \
   sort -k1,1 -k2,2n > ${BASENAME}_peaks_Genrich.narrowPeak
 
 }; export -f GenR
