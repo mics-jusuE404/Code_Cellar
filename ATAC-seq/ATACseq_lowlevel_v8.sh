@@ -259,7 +259,7 @@ function Bigwig {
     
   (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' $1 'started on') <(date))
   
-  ## bamCoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
+  ## bamcoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
   if [[ $(cat sizeFactors.txt | wc -l | xargs) > 1 ]]; then
     FACTOR=$(grep ${FILE%_cutsites*}_dedup.bam sizeFactors.txt | \
              cut -f2 | bc <<< "scale=6;$(grep ${FILE%_cutsites*}_dedup.bam sizeFactors.txt | cut -f2)^-1")
@@ -332,7 +332,12 @@ if [[ $(ls *_raw.bam | wc -l) > 1 ]];
 ####################################################################################################################################
 
 ## Get browser tracks, scaled by the size factor from deseq:
-ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {} 2>> {}.log"
+if [[ $(ls *_cutsites_noScale.bigwig | wc -l) > 1 ]];
+  then
+  ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {} 2>> {}.log"
+  else
+    (>&2 echo '[INFO] Only one sample present, skipping size factor normalization of bigwig file')
+  fi  
 
 ####################################################################################################################################
 
