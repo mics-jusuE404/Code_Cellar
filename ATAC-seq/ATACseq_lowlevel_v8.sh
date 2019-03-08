@@ -24,6 +24,14 @@ BLACKLIST="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
 RSCRIPT="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
+if [[ ${GENOME} == "hg38" ]]; then
+	IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+	fi
+  
+if [[ ${GENOME} == "mm10" ]]; then
+	IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
+	fi  
+
 ######################################################################################################################################
 
 ## Check if required tools are in PATH:
@@ -134,33 +142,51 @@ function mtDNA {
 
 ######################################################################################################################################
 
- function Fq2BamPE {
+ function Fq2Bam {
 
   BASENAME=$1
+  TYPE=$2
+	IDX=$3
+	
+	if [[ $TYPE == "PE" ]]; then
+		IND="paired-end mode"
+		fi
+	if [[ $TYPE == "SE" ]]; then
+		IND="paired-end mode"
+		fi
+			
+	(>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'started on') <(date))
   
-  (>&2 paste -d " " <(echo '[INFO]' 'Fq2BamPE for' $1 'started on') <(date))
-  
-  if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
-  echo '[ERROR] At least one input files is missing -- exiting' && exit 1
-  fi
-  
+	if [[ $TYPE == "PE" ]]; then
+  	if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
+    	echo '[ERROR] At least one input files is missing -- exiting' && exit 1
+    	fi
+  else
+  	if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
+    	echo '[ERROR] At least one input files is missing -- exiting' && exit 1
+    	fi
+	fi   
+    
   ## Nextera adapter:
-  ADAPTER1="CTGTCTCTTATACACATCT"
-  ADAPTER2="CTGTCTCTTATACACATCT"
-  
-  if [[ ${2} == "hg38" ]]; then
-  IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
-  fi
-  
-  if [[ ${2} == "mm10" ]]; then
-  IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
-  fi  
-  
-  ## Fastq to raw (unfiltered) alignments:
-  seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
-  cutadapt -j 1 -a $ADAPTER1 -A $ADAPTER2 --interleaved -m 18 --max-n 0.1 - | \
-  bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved - | \
-  samtools fixmate -m -@ 2 -O SAM - - | \
+  ADAPTER="CTGTCTCTTATACACATCT"
+    
+  PAIREDRUN="seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
+  					 cutadapt -j 1 -a $ADAPTER -A $ADAPTER --interleaved -m 18 --max-n 0.1 - | \
+					   bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved - | \
+					   samtools fixmate -m -@ 2 -O SAM - -"
+	
+	SINGLERUN="cutadapt -j 1 -a $ADAPTER -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
+					   bowtie2 --very-sensitive --threads 16 -x $IDX -U -"
+	
+	if [[ $TYPE == "PE" ]]; then
+		RUN=${PAIREDRUN}
+		fi
+	if [[ $TYPE == "SE" ]]; then
+		RUN=${SINGLERUN}
+		fi
+	
+	## ALign and filter:
+	${RUN} | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 5 -t 2 -o /dev/stdout /dev/stdin | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
@@ -173,10 +199,17 @@ function mtDNA {
   if [[ ! -e tmp_chromSizes.txt ]]; then
     samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
     fi
-    
+  
+	if [[ $TYPE == "PE" ]]; then
+		NUMFILTER=1
+		fi
+	if [[ $TYPE == "SE" ]]; then
+		NUMFILTER=0
+		fi
+		
   samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-  xargs sambamba view -l 5 -f bam -t 8 --num-filter=1/2308 --filter='mapping_quality > 19' \
-  -o /dev/stdout ${BASENAME}_raw.bam | \
+  xargs sambamba view -l 5 -f bam -t 8 --num-filter=${NUMFILTER}/2308 --filter='mapping_quality > 19' \
+  	-o /dev/stdout ${BASENAME}_raw.bam | \
   tee ${BASENAME}_dup.bam | \
   tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
   sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
@@ -194,75 +227,11 @@ function mtDNA {
   
   BamCheck ${BASENAME}_dedup.bam
     
-  (>&2 paste -d " " <(echo '[INFO]' 'Fq2BamPE for' $1 'ended on') <(date))
+	(>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'ended on') <(date))
 
 }
 
-export -f Fq2BamPE
-
-######################################################################################################################################
-
-function Fq2BamSE {
-  
-  BASENAME=$1
-  (>&2 paste -d " " <(echo '[INFO]' 'Fq2BamSE for' $1 'started on') <(date))
-  
-  if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
-  echo '[ERROR] At least one input files is missing -- exiting' && exit 1
-    fi
-    
-  ## Nextera adapter:
-  ADAPTER1="CTGTCTCTTATACACATCT"
-      
-  if [[ ${2} == "hg38" ]]; then
-  IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
-    fi
-  
-  if [[ ${2} == "mm10" ]]; then
-  IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
-    fi  
-    
-  ## Alignment, save BAM with all reads included (_raw.bam)
-  cutadapt -j 1 -a $ADAPTER1 -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
-  bowtie2 --very-sensitive --threads 16 -x $IDX -U - | \
-  samblaster --ignoreUnmated | \
-  sambamba view -f bam -S -l 0 -t 2 -o /dev/stdout /dev/stdin | \
-  tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-  sambamba sort -m 4G --tmpdir=./ -l 6 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
-    
-  BamCheck ${BASENAME}_raw.bam
-  mtDNA ${BASENAME}_raw.bam
-    
-  ## Remove non-primary chromosomes and low-quality alignments, 
-  ## outputting BAMs with and w/o duplicates, 
-
-  if [[ ! -e tmp_chromSizes.txt ]]; then
-    samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
-    fi
-    
-  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-  xargs sambamba view -l 5 -f bam -t 8 --num-filter=0/2308 --filter='mapping_quality > 19' \
-  -o /dev/stdout ${BASENAME}_raw.bam | \
-  tee ${BASENAME}_dup.bam | \
-  tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
-  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
-  tee >(tee ${BASENAME}_dedup.bam | samtools index - ${BASENAME}_dedup.bam.bai) | \
-  bedtools bamtobed -i - | \
-  mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
-  sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 |
-  tee >(bgzip -@ 6 > ${BASENAME}_cutsites.bed.gz) | \
-  bedtools genomecov -bg -i - -g tmp_chromSizes.txt | \
-  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${BASENAME}_cutsites_noScale.bigwig
-    
-  ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
-
-  BamCheck ${BASENAME}_dup.bam
-    
-  BamCheck ${BASENAME}_dedup.bam
-    
-  (>&2 paste -d " " <(echo '[INFO]' 'Fq2BamSE for' $1 'ended on') <(date))
-    
-}; export -f Fq2BamSE
+export -f Fq2Bam
 
 ######################################################################################################################################
 
@@ -343,11 +312,11 @@ if [[ $MODE != "PE" ]] && [[ $MODE != "SE" ]]; then
   exit 1; fi
  
 if [[ $MODE == "PE" ]]; then
-  ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | sort -u | parallel -j 4 "Fq2BamPE {} $GENOME 2>> {}.log"
+  ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | sort -u | parallel -j 4 "Fq2Bam {} ${MODE} ${IDX} 2>> {}.log"
   fi
 
 if [[ $MODE == "SE" ]]; then
-  ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | sort -u | parallel -j 4 "Fq2BamSE {} $GENOME 2>> {}.log"
+  ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | sort -u | parallel -j 4 "Fq2Bam {} ${MODE} ${IDX} 2>> {}.log"
   fi
 
 ####################################################################################################################################
@@ -358,13 +327,14 @@ SizeFactor 2> sizeFactors.log
 ####################################################################################################################################
 
 ## Get browser tracks, scaled by the size factor from deseq:
-ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {}"
+ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {} 2>> {}.log"
 
 ####################################################################################################################################
 
 ## Insert Sizes given paired-end data:
 if [[ $MODE == "PE" ]]; then
 (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
+
 ls *_dedup.bam | \
   parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
   (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
@@ -389,7 +359,7 @@ if [[ $MODE == "SE" ]]; then
 
 ####################################################################################################################################
 
-## Peaks for each sample:
+## Peaks for each sample at 1% FDR:
 if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
 if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
