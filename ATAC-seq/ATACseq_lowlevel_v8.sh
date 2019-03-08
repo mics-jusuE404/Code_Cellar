@@ -15,12 +15,11 @@
 
 ######################################################################################################################################
 
-## due to different conda envs, some things have to be set explicitely:
+## Due to different conda envs (macs2 needs py27, and Rscript is in R env), some things have to be set explicitely:
 
 GENOME="mm10"
 MODE="PE"
 BLACKLIST="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
-##
 RSCRIPT="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
@@ -47,7 +46,7 @@ function PathCheck {
 
 TOOLS=(cat seqtk cutadapt bwa samtools samblaster sambamba tee xargs bedtools mawk bgzip tabix \
        sort paste featureCounts bc bamCoverage parallel fastqc picard preseq multiqc $RSCRIPT \
-       bigWigToBedGraph $MACS bg2bw pigz bamcollate2)
+       bigWigToBedGraph $MACS bg2bw pigz bamcollate2 idr)
 
 for i in $(echo ${TOOLS[*]}); do
   PathCheck $i; done
@@ -363,10 +362,22 @@ if [[ $MODE == "SE" ]]; then
 if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
 if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
+## Call Peaks:
 ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
-  parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {} -g $GFLAG \
+  parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {}_FDR1perc_unfiltered -g $GFLAG \
                   --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
 
+## Filter against blacklist:
+ls *_FDR1perc_unfiltered_peaks.narrowPeak | \
+  awk -F "_FDR1perc_unfiltered_peaks.narrowPeak" '{print $1}' | \
+  parallel "bedtools intersect -v -a {}_FDR1perc_unfiltered_peaks.narrowPeak \
+                                  -b ${BLACKLIST} > {}_FDR1perc_filtered_peaks.narrowPeak"
+				  
+ls *_FDR1perc_unfiltered_summits.bed | \
+  awk -F "_FDR1perc_unfiltered_summits.bed" '{print $1}' | \
+  parallel "bedtools intersect -v -a {}_FDR1perc_unfiltered_summits.bed \
+                                  -b ${BLACKLIST} > {}_FDR1perc_filtered_summits.bed"				  
+		  
 ####################################################################################################################################
 
 ## FRiP:
