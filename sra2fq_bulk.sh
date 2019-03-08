@@ -17,6 +17,11 @@
 
 #########################################################################################################
 
+if [[ ! -e IDs.txt ]]; then
+  echo '[ERROR]: IDs.txt is missing -- exit'
+  exit 1
+  fi
+
 function LoadDump {
   prefetch -O ./ -X 999999999 $1 
   
