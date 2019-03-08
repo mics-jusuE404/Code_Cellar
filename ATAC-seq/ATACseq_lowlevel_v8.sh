@@ -141,51 +141,51 @@ function mtDNA {
 
 ######################################################################################################################################
 
- function Fq2Bam {
+function Fq2Bam {
 
   BASENAME=$1
   TYPE=$2
-	IDX=$3
+  IDX=$3
 	
-	if [[ $TYPE == "PE" ]]; then
-		IND="paired-end mode"
-		fi
-	if [[ $TYPE == "SE" ]]; then
-		IND="paired-end mode"
-		fi
+  if [[ $TYPE == "PE" ]]; then
+    IND="paired-end mode"
+    fi
+  if [[ $TYPE == "SE" ]]; then
+    IND="paired-end mode"
+    fi
 			
-	(>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'started on') <(date))
   
-	if [[ $TYPE == "PE" ]]; then
-  	if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
-    	echo '[ERROR] At least one input files is missing -- exiting' && exit 1
-    	fi
-  else
-  	if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
-    	echo '[ERROR] At least one input files is missing -- exiting' && exit 1
-    	fi
-	fi   
+  if [[ $TYPE == "PE" ]]; then
+    if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
+    echo '[ERROR] At least one input files is missing -- exiting' && exit 1
+      fi
+    else
+      if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
+        echo '[ERROR] At least one input files is missing -- exiting' && exit 1
+        fi
+    fi   
     
   ## Nextera adapter:
   ADAPTER="CTGTCTCTTATACACATCT"
     
   PAIREDRUN="seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
-  					 cutadapt -j 1 -a $ADAPTER -A $ADAPTER --interleaved -m 18 --max-n 0.1 - | \
-					   bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved - | \
-					   samtools fixmate -m -@ 2 -O SAM - -"
+  	     cutadapt -j 1 -a ${ADAPTER} -A ${ADAPTER} --interleaved -m 18 --max-n 0.1 - | \
+	     bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved - | \
+	     samtools fixmate -m -@ 2 -O SAM - -"
 	
-	SINGLERUN="cutadapt -j 1 -a $ADAPTER -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
-					   bowtie2 --very-sensitive --threads 16 -x $IDX -U -"
+  SINGLERUN="cutadapt -j 1 -a ${ADAPTER} -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
+	     bowtie2 --very-sensitive --threads 16 -x $IDX -U -"
 	
-	if [[ $TYPE == "PE" ]]; then
-		RUN=${PAIREDRUN}
-		fi
-	if [[ $TYPE == "SE" ]]; then
-		RUN=${SINGLERUN}
-		fi
+  if [[ $TYPE == "PE" ]]; then
+    RUN=${PAIREDRUN}
+      fi
+  if [[ $TYPE == "SE" ]]; then
+    RUN=${SINGLERUN}
+    fi
 	
-	## ALign and filter:
-	${RUN} | \
+  ## ALign and filter:
+  eval ${RUN} | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 5 -t 2 -o /dev/stdout /dev/stdin | \
   tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
@@ -199,16 +199,16 @@ function mtDNA {
     samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
     fi
   
-	if [[ $TYPE == "PE" ]]; then
-		NUMFILTER=1
-		fi
-	if [[ $TYPE == "SE" ]]; then
-		NUMFILTER=0
-		fi
+  if [[ $TYPE == "PE" ]]; then
+    NUMFILTER=1
+    fi
+  if [[ $TYPE == "SE" ]]; then
+    NUMFILTER=0
+    fi
 		
   samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
   xargs sambamba view -l 5 -f bam -t 8 --num-filter=${NUMFILTER}/2308 --filter='mapping_quality > 19' \
-  	-o /dev/stdout ${BASENAME}_raw.bam | \
+  -o /dev/stdout ${BASENAME}_raw.bam | \
   tee ${BASENAME}_dup.bam | \
   tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
   sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
@@ -226,7 +226,7 @@ function mtDNA {
   
   BamCheck ${BASENAME}_dedup.bam
     
-	(>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'ended on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'ended on') <(date))
 
 }
 
