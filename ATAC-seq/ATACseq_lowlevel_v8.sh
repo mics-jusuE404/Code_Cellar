@@ -321,8 +321,14 @@ if [[ $MODE == "SE" ]]; then
 ####################################################################################################################################
 
 ## Estimate size factors:
-SizeFactor 2> sizeFactors.log
-
+if [[ $(ls *_raw.bam | wc -l) > 1 ]];
+  then
+  SizeFactor 2> sizeFactors.log
+  else  
+  echo 'NULL' > sizeFactors.txt
+  echo 'Only one sample' > sizeFactors.log
+  fi
+  
 ####################################################################################################################################
 
 ## Get browser tracks, scaled by the size factor from deseq:
