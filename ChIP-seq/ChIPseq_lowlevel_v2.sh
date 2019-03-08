@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=72
 #SBATCH --partition=normal
 #SBATCH --mem=80G
-#SBATCH --time=48:00:00 
+#SBATCH --time=24:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
 #SBATCH --job-name=ChIPseq_lowlevel
@@ -246,15 +246,15 @@ ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | sort -u | \
   parallel "$MACS callpeak -t {}_dedup.bam -n {}_unfiltered -g $GFLAG"
 
 ## Filter against blacklist:
-ls *_FDR1perc_unfiltered_peaks.narrowPeak | \
-  awk -F "_FDR1perc_unfiltered_peaks.narrowPeak" '{print $1}' | \
-  parallel "bedtools intersect -v -a {}_FDR1perc_unfiltered_peaks.narrowPeak \
-                                  -b ${BLACKLIST} > {}_FDR1perc_filtered_peaks.narrowPeak"
+ls *_unfiltered_peaks.narrowPeak | \
+  awk -F "_unfiltered_peaks.narrowPeak" '{print $1}' | \
+  parallel "bedtools intersect -v -a {}_unfiltered_peaks.narrowPeak \
+                                  -b ${BLACKLIST} > {}_filtered_peaks.narrowPeak"
 				  
-ls *_FDR1perc_unfiltered_summits.bed | \
-  awk -F "_FDR1perc_unfiltered_summits.bed" '{print $1}' | \
+ls *_unfiltered_summits.bed | \
+  awk -F "_unfiltered_summits.bed" '{print $1}' | \
   parallel "bedtools intersect -v -a {}_FDR1perc_unfiltered_summits.bed \
-                                  -b ${BLACKLIST} > {}_FDR1perc_filtered_summits.bed"				  
+                                  -b ${BLACKLIST} > {}_filtered_summits.bed"				  
 		  
 ####################################################################################################################################
 
