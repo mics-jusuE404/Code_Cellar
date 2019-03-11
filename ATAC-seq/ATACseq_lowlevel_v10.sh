@@ -396,7 +396,7 @@ ls *_FDR1perc_unfiltered_summits.bed | \
 
 ls *cutsites.bed.gz | \
   awk -F "_cutsites.bed.gz" '{print $1}' | \
-  parallel "FRiP {}_peaks_.narrowPeak {}_cutsites.bed.gz" > FRiP_scores.txt
+  parallel "FRiP {}_FDR1perc_filtered_peaks.narrowPeak {}_cutsites.bed.gz" > FRiP_scores.txt
   
 (>&2 paste -d " " <(echo '[INFO] FRiP score calculation endedn on') <(date))
 
