@@ -334,7 +334,8 @@ if [[ $(ls *_raw.bam | wc -l) > 1 ]];
 ## Get browser tracks, scaled by the size factor from deseq:
 if [[ $(ls *_cutsites_noScale.bigwig | wc -l) > 1 ]];
   then
-  ls *_cutsites_noScale.bigwig | parallel -j 4 "Bigwig {} 2>> {}.log"
+  ls *_cutsites_noScale.bigwig | awk -F "_cutsites_noScale.bigwig" '{print $1}' | \
+  parallel -j 4 "Bigwig {}_cutsites_noScale.bigwig 2>> {}.log"
   else
     (>&2 echo '[INFO] Only one sample present, skipping size factor normalization of bigwig file')
   fi  
