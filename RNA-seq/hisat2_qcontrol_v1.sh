@@ -106,4 +106,4 @@ function AlnQualControl {
 }; export -f AlnQualControl 
 
 ls *_1.fastq.gz | awk -F "_1" '{print $1}' | sort -u | \
-  parallel -j 4 "AlnQualControl {} $HISAT2_IDX $SPLICE_FILE $GENEMODEL 2> {}.log"
+  parallel -j 4 "AlnQualControl {} $HISAT2_IDX $SPLICE_FILE $GENEMODEL 2> {}_hisat2.log"
