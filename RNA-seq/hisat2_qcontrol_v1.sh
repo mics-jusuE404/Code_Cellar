@@ -85,7 +85,6 @@ function AlnQualControl {
   hisat2 -p 12 \
     --rg-id ${BASENAME} \
     --known-splicesite-infile $3 \
-    --summary-file ${1}_hisat2_report.log \
     -x $2 \
     -1 ${BASENAME}_1.fastq.gz \
     -2 ${BASENAME}_2.fastq.gz | \
