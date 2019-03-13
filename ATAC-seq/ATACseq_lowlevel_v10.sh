@@ -171,7 +171,7 @@ function Fq2Bam {
     
   PAIREDRUN="seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
   	     cutadapt -j 1 -a ${ADAPTER} -A ${ADAPTER} --interleaved -m 18 --max-n 0.1 - | \
-	     bowtie2 --very-sensitive --threads 16 -x $IDX --interleaved - | \
+	     bowtie2 --very-sensitive --threads 16 -X 2000 --rg-id ${BASENAME} -x $IDX --interleaved - | \
 	     samtools fixmate -m -@ 2 -O SAM - -"
 	
   SINGLERUN="cutadapt -j 1 -a ${ADAPTER} -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
