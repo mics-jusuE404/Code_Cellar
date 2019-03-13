@@ -19,17 +19,18 @@
 
 GENOME="mm10"
 MODE="PE"
-BLACKLIST="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
 RSCRIPT="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
 if [[ ${GENOME} == "hg38" ]]; then
-	IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
-	fi
+  IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+  BLACKLIST="/scratch/tmp/a_toen03/Genomes/hg38/Blacklists/hg38_consensusBL.bed"
+  fi
   
 if [[ ${GENOME} == "mm10" ]]; then
-	IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
-	fi  
+  IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
+  BLACKLIST="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
+  fi  
 
 ######################################################################################################################################
 
