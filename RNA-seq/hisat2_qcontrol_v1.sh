@@ -92,7 +92,7 @@ function AlnQualControl {
   tee >(samtools flagstat - > ${BASENAME}_sorted.flagstat) | \
   samtools sort -O BAM -m 1G -@ 12 - | \
   tee ${BASENAME}_sorted.bam | \
-  samtools index - > ${BASENAME}_sorted.bam.bai
+  samtools index -@ 2 - ${BASENAME}_sorted.bam.bai
   
   BamCheck ${BASENAME}_sorted.bam
   
