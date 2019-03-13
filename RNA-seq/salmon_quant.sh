@@ -46,6 +46,7 @@ function SALMON {
   
   salmon quant \
     -l A -i $2 -p 8 \
+    --no-version-check \
     --validateMappings \
     --maxMMPExtension 7 \
     --seqBias \
