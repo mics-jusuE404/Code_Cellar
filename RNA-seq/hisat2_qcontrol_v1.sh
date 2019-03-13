@@ -13,16 +13,18 @@
 #SBATCH --job-name=hisat2_qualcontrol
 #######
 
-################################################################################################################################################
+########################################################################################################################################
 
-BASENAME=$1
+GENOME="mm10"
+MODE="PE"
 
-## HISAT2 index, splice-site file and genome GTF:
-HISAT2_IDX="/scratch/tmp/a_toen03/Genomes/mm10/hisat2_index/mm10"
-SPLICE_FILE="/scratch/tmp/a_toen03/Genomes/mm10/hisat2index/mm10_spliceSites.txt"
-GENEMODEL="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/GRCm38_mm10_Ensembl_GeneModel.bed"
+if [[ ${GENOME} == "mm10" ]]; then
+  HISAT2_IDX="/scratch/tmp/a_toen03/Genomes/mm10/hisat2_index/mm10"
+  SPLICE_FILE="/scratch/tmp/a_toen03/Genomes/mm10/hisat2index/mm10_spliceSites.txt"
+  GENEMODEL="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/GRCm38_mm10_Ensembl_GeneModel.bed"
+  fi
 
-################################################################################################################################################
+########################################################################################################################################
 
 if [[ -e missing_tools.txt ]]; then rm missing_tools.txt; fi
 
@@ -43,7 +45,7 @@ if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0
   echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1
   fi
  
-################################################################################################################################################
+########################################################################################################################################
 
 function AlnQualControl {
   
