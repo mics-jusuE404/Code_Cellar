@@ -61,5 +61,6 @@ function SALMON {
 if [[ "$(ls *.fastq.gz 2>/dev/null | wc -l)" == 0 ]]; then
   echo '[ERROR]: No fastq.gz files present in $pwd -- exiting' && exit 1
   fi
-  
+
+echo "[INFO]: This is" $(salmon --version)
 ls *_1.fastq.gz | awk -F "_1" '{print $1}' | parallel -j 8 "SALMON {} $IDX"
