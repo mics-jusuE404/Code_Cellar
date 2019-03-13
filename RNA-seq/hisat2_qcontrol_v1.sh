@@ -44,7 +44,30 @@ for i in $(echo ${TOOLS[*]}); do
 if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0 ]]; then
   echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1
   fi
- 
+
+######################################################################################################################################
+
+function ExitBam {
+
+  (>&2 echo '[ERROR]' $1 'looks suspicious or is empty -- exiting') && exit 1
+  
+}; export -f ExitBam
+
+######################################################################################################################################
+
+## Check if BAM is corrupted or empty:
+function BamCheck {
+  
+  BASENAME=${1%_*}
+  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam $1
+    
+  ## Also check if file is not empty:
+  if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
+  ExitBam $BASENAME
+  fi
+  
+}; export -f BamCheck 
+
 ########################################################################################################################################
 
 function AlnQualControl {
@@ -68,9 +91,11 @@ function AlnQualControl {
     -2 ${BASENAME}_2.fastq.gz | \
   samblaster | \
   tee >(samtools flagstat - > ${BASENAME}_sorted.flagstat) | \
-  samtools view -m 1G -@ 12 -b | \
+  samtools sort -O BAM -m 1G -@ 12 - | \
   tee ${BASENAME}_sorted.bam | \
   samtools index - > ${BASENAME}_sorted.bam.bai
+  
+  BamCheck ${BASENAME}_sorted.bam
   
   ## QC:
   read_distribution.py -i ${BASENAME}_sorted.bam -r $4 > ${BASENAME}_sorted_readDistro.txt
