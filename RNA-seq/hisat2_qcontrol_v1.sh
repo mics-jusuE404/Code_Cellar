@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Quality control and alignment of PE RNA-seq data with hisat2, RSeQC, fastqc:
+## Quality control and alignment of PE RNA-seq data with hisat2, RSeQC:
 
 #######
 #SBATCH --nodes=1
@@ -10,7 +10,7 @@
 #SBATCH --time=48:00:00 
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=a_toen03@uni-muenster.de
-#SBATCH --job-name=hisat2
+#SBATCH --job-name=hisat2_qualcontrol
 #######
 
 ################################################################################################################################################
@@ -22,7 +22,30 @@ HISAT2_IDX="/scratch/tmp/a_toen03/Genomes/mm10/hisat2_index/mm10"
 SPLICE_FILE="/scratch/tmp/a_toen03/Genomes/mm10/hisat2index/mm10_spliceSites.txt"
 GENEMODEL="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/GRCm38_mm10_Ensembl_GeneModel.bed"
 
-function HisatALN {
+################################################################################################################################################
+
+if [[ -e missing_tools.txt ]]; then rm missing_tools.txt; fi
+
+function PathCheck {
+  
+  if [[ $(command -v $1 | wc -l) == 0 ]]; then 
+    echo ${1} >> missing_tools.txt
+    fi
+  
+}; export -f PathCheck
+
+TOOLS=(hisat2 samtools read_distribution.py read_duplication.py parallel xargs)
+
+for i in $(echo ${TOOLS[*]}); do
+  PathCheck $i; done
+  
+if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0 ]]; then
+  echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1
+  fi
+ 
+################################################################################################################################################
+
+function AlnQualControl {
   
   BASENAME=$1 
   
@@ -34,17 +57,17 @@ function HisatALN {
   
   (>&2 paste -d " " <(echo '[INFO]' 'HisatALN for' $1 'started on') <(date))
   
-  hisat2 -p 12 -X 1000 \
+  hisat2 -p 12 \
+    --rg-id ${BASENAME} \
     --known-splicesite-infile $3 \
     --summary-file ${1}_hisat2_report.log \
     -x $2 \
     -1 ${BASENAME}_1.fastq.gz \
     -2 ${BASENAME}_2.fastq.gz | \
   samblaster | \
-  sambamba view -S -f bam -l 5 -t 4 -o /dev/stdout /dev/stdin | \
-  sambamba sort -m 4G --tmpdir=./ -l 6 -t 12 -o /dev/stdout /dev/stdin | \
-  tee ${BASENAME}_sorted.bam | \
   tee >(samtools flagstat - > ${BASENAME}_sorted.flagstat) | \
+  samtools view -m 1G -@ 12 -b | \
+  tee ${BASENAME}_sorted.bam | \
   samtools index - > ${BASENAME}_sorted.bam.bai
   
   ## QC:
@@ -53,11 +76,7 @@ function HisatALN {
   
   (>&2 paste -d " " <(echo '[INFO]' 'HisatALN for' $1 'ended on') <(date))
   
-}; export -f HisatALN 
-
-ls *.fastq.gz | parallel -j 72 "fastqc {}"
+}; export -f AlnQualControl 
 
 ls *_1.fastq.gz | awk -F "_1" '{print $1}' | sort -u | \
-  parallel -j 4 "HisatALN {} $HISAT2_IDX $SPLICE_FILE $GENEMODEL 2>> {}.log"
-  
-multiqc -o multiqc_all ./
+  parallel -j 4 "AlnQualControl {} $HISAT2_IDX $SPLICE_FILE $GENEMODEL 2> {}.log"
