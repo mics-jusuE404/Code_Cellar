@@ -19,11 +19,12 @@
 GENOME="hg19"
 CUTTER="HindIII"
 BOWTIE2="/home/a/a_toen03/anaconda3_things/anaconda3/bin/bowtie2"
+THREADS=32
 
 #####################################################################################################################################
 
 if [[ ${GENOME} == "hg19" ]]; then
-  IDX="/scratch/tmp/a_toen03/Genomes/hg19/bowtie2_idx"
+  IDX="/scratch/tmp/a_toen03/Genomes/hg19/bowtie2_idx/hg19"
   fi
   
 if [[ ${CUTTER} == "HindIII" ]]; then
@@ -64,30 +65,27 @@ function HICUP {
   BASENAME=$1
   BOWTIE2=$2
   IDX=$3
-  OUTDIR=$4
-  THREADS=$5  
-  DIGEST=$6
+  THREADS=$4  
+  DIGEST=$5
   
-  (>&2 paste -d " " <(echo [INFO] HiCUP pipeline for' "${BASENAME}" 'started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO] HiCUP pipeline for' "${BASENAME}" 'started on') <(date))
   
-  mkdir ${BASENAME}_HiCUP
+  if [[ ! -e ${BASENAME}_HiCUP ]]; then mkdir ${BASENAME}_HiCUP; fi
   
   hicup \
     --bowtie2 ${BOWTIE2} \
     --digest ${DIGEST} \
-    --format Sanger \
     --index ${IDX} \
-    --outdir ${OUTDIR} \
-    --temp (tmp) \
+    --outdir ./${BASENAME}_HiCUP \
+    --temp ./${BASENAME}_HiCUP \
     --threads ${THREADS} \
-    --zip \
-    ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz 
+    --zip ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz 
   
-  (>&2 paste -d " " <(echo [INFO] HiCUP pipeline for' "${BASENAME}" 'ended on') <(date))
+  (>&2 paste -d " " <(echo '[INFO] HiCUP pipeline for' "${BASENAME}" 'ended on') <(date))
   
 }; export -f HICUP
 
 #####################################################################################################################################
 
-ls *_1.fastq.gz | awk -F "_" '{print $1}' | \
-   parallel -j 2 "HICUP {} ${BOWTIE2} ${IDX} {}_HiCUP ${THREADS} ${DIGESTFILE} 2> {}.log"
+ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | \
+   parallel -j 2 "HICUP {} ${BOWTIE2} ${IDX} ${THREADS} ${DIGESTFILE} 2> {}.log"
