@@ -19,6 +19,7 @@
 
 GENOME="mm10"
 MODE="PE"
+JOBS=4
 RSCRIPT="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 MACS="$HOME/anaconda3_things/anaconda3/envs/py27_env/bin/macs2"
 
@@ -302,7 +303,7 @@ function FRiP {
 ####################################################################################################################################
 
 ## fastqc:
-ls *fastq.gz | parallel -j 70 "fastqc -t 1 {}"
+ls *fastq.gz | parallel -j 64 "fastqc -t 1 {}"
 
 ####################################################################################################################################
 
@@ -312,11 +313,11 @@ if [[ $MODE != "PE" ]] && [[ $MODE != "SE" ]]; then
   exit 1; fi
  
 if [[ $MODE == "PE" ]]; then
-  ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | sort -u | parallel -j 4 "Fq2Bam {} ${MODE} ${IDX} 2>> {}.log"
+  ls *_1.fastq.gz | awk -F "_1.fastq.gz" '{print $1}' | sort -u | parallel -j $JOBS "Fq2Bam {} ${MODE} ${IDX} 2>> {}.log"
   fi
 
 if [[ $MODE == "SE" ]]; then
-  ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | sort -u | parallel -j 4 "Fq2Bam {} ${MODE} ${IDX} 2>> {}.log"
+  ls *.fastq.gz | awk -F ".fastq.gz" '{print $1}' | sort -u | parallel -j $JOBS "Fq2Bam {} ${MODE} ${IDX} 2>> {}.log"
   fi
 
 ####################################################################################################################################
@@ -336,7 +337,7 @@ if [[ $(ls *_raw.bam | wc -l) > 1 ]];
 if [[ $(ls *_cutsites_noScale.bigwig | wc -l) > 1 ]];
   then
   ls *_cutsites_noScale.bigwig | awk -F "_cutsites_noScale.bigwig" '{print $1}' | \
-  parallel -j 4 "Bigwig {}_cutsites_noScale.bigwig 2>> {}.log"
+  parallel -j 16 "Bigwig {}_cutsites_noScale.bigwig 2>> {}.log"
   else
     (>&2 echo '[INFO] Only one sample present, skipping size factor normalization of bigwig file')
   fi  
