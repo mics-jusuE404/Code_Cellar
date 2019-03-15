@@ -48,7 +48,7 @@ function PathCheck {
 
 TOOLS=(cat seqtk cutadapt bwa samtools samblaster sambamba tee xargs bedtools mawk bgzip tabix \
        sort paste featureCounts bc bamCoverage parallel fastqc picard preseq multiqc $RSCRIPT \
-       bigWigToBedGraph $MACS bg2bw pigz bamcollate2 idr)
+       bigWigToBedGraph $MACS bg2bw pigz)
 
 for i in $(echo ${TOOLS[*]}); do
   PathCheck $i; done
