@@ -392,7 +392,19 @@ ls *_FDR1perc_unfiltered_peaks.narrowPeak | \
 ls *_FDR1perc_unfiltered_summits.bed | \
   awk -F "_FDR1perc_unfiltered_summits.bed" '{print $1}' | \
   parallel "bedtools intersect -v -a {}_FDR1perc_unfiltered_summits.bed \
-                                  -b ${BLACKLIST} > {}_FDR1perc_filtered_summits.bed"				  
+                                  -b ${BLACKLIST} > {}_FDR1perc_filtered_summits.bed"
+				  
+function GSUB {
+
+  NAME=$(echo "${1}" | rev | awk -F "." '{print $2}' | rev)
+  SUF=$(echo "${1}" | rev | awk -F "." '{print $1}' | rev)
+  
+  awk 'OFS="\t" {gsub("unfiltered","filtered");print}' "${1}" > "${NAME}"_tmpRename
+  mv "${NAME}"_tmpRename "${NAME}"."${SUF}"
+  
+}; export -f GSUB
+
+ls *_FDR1perc_filtered* | parallel "GSUB {}"
 		  
 ####################################################################################################################################
 
