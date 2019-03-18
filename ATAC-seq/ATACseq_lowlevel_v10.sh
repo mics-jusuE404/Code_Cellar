@@ -103,7 +103,7 @@ EOF
 ## Exit function if BAM file looks corrupted or is missing:
 function ExitBam {
 
-  (>&2 echo '[ERROR]' $1 'looks suspicious or is empty -- exiting') && exit 1
+  (>&2 echo '[ERROR]' "${1}" 'looks suspicious or is empty -- exiting') && exit 1
   
 }; export -f ExitBam
 
@@ -112,11 +112,11 @@ function ExitBam {
 ## Check if BAM is corrupted or empty:
 function BamCheck {
   
-  BASENAME=${1%_*}
-  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam $1
+  BASENAME="${1%_*}"
+  samtools quickcheck -q $1 && echo '' >/dev/null || ExitBam "${1}"
     
   ## Also check if file is not empty:
-  if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
+  if [[ $(samtools view "${1}" | head -n 1 | wc -l) < 1 ]]; then
   ExitBam $BASENAME
   fi
   
@@ -129,7 +129,7 @@ function mtDNA {
 
   BamCheck $1
     
-  if [[ ! -e ${1}.bai ]];
+  if [[ ! -e "${1}".bai ]];
   then
   sambamba index -t 8 ${1}
   fi
@@ -137,7 +137,7 @@ function mtDNA {
   mtReads=$(samtools idxstats $1 | grep 'chrM' | cut -f 3)
   totalReads=$(samtools idxstats $1 | awk '{SUM += $3} END {print SUM}')
 
-  echo '[mtDNA Content]' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%' > ${1%.bam}_mtDNA.txt
+  echo '[mtDNA Content]' $(bc <<< "scale=2;100*$mtReads/$totalReads")'%' > "${1%.bam}"_mtDNA.txt
   
 }; export -f mtDNA
 
@@ -145,25 +145,25 @@ function mtDNA {
 
 function Fq2Bam {
 
-  BASENAME=$1
-  TYPE=$2
-  IDX=$3
+  BASENAME="${1}"
+  TYPE="${2}"
+  IDX="${3}"
 	
-  if [[ $TYPE == "PE" ]]; then
+  if [[ "${TYPE}" == "PE" ]]; then
     IND="paired-end mode"
     fi
-  if [[ $TYPE == "SE" ]]; then
+  if [[ "${TYPE}" == "SE" ]]; then
     IND="paired-end mode"
     fi
 			
-  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' "${1}" 'in' ${IND} 'started on') <(date))
   
-  if [[ $TYPE == "PE" ]]; then
-    if [[ ! -e ${BASENAME}_1.fastq.gz ]] || [[ ! -e ${BASENAME}_2.fastq.gz ]]; then
+  if [[ "${TYPE}" == "PE" ]]; then
+    if [[ ! -e "${BASENAME}"_1.fastq.gz ]] || [[ ! -e "${BASENAME}"_2.fastq.gz ]]; then
     echo '[ERROR] At least one input files is missing -- exiting' && exit 1
       fi
     else
-      if [[ ! -e ${BASENAME}.fastq.gz ]] ; then
+      if [[ ! -e "${BASENAME}".fastq.gz ]] ; then
         echo '[ERROR] At least one input files is missing -- exiting' && exit 1
         fi
     fi   
@@ -171,64 +171,64 @@ function Fq2Bam {
   ## Nextera adapter:
   ADAPTER="CTGTCTCTTATACACATCT"
     
-  PAIREDRUN="seqtk mergepe ${BASENAME}_1.fastq.gz ${BASENAME}_2.fastq.gz | \
-  	     cutadapt -j 1 -a ${ADAPTER} -A ${ADAPTER} --interleaved -m 18 --max-n 0.1 - | \
-	     bowtie2 --very-sensitive --threads 16 -X 2000 --rg-id ${BASENAME} -x $IDX --interleaved - | \
+  PAIREDRUN="seqtk mergepe "${BASENAME}"_1.fastq.gz "${BASENAME}"_2.fastq.gz | \
+  	     cutadapt -j 1 -a "${ADAPTER}" -A "${ADAPTER}" --interleaved -m 18 --max-n 0.1 - | \
+	     bowtie2 --very-sensitive --threads 16 -X 2000 --rg-id "${BASENAME}" -x $IDX --interleaved - | \
 	     samtools fixmate -m -@ 2 -O SAM - -"
 	
-  SINGLERUN="cutadapt -j 1 -a ${ADAPTER} -m 18 --max-n 0.1 ${BASENAME}.fastq.gz | \
-	     bowtie2 --very-sensitive --threads 16 -x $IDX -U -"
+  SINGLERUN="cutadapt -j 1 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz | \
+	     bowtie2 --very-sensitive --threads 16 -x "${IDX}" -U -"
 	
   if [[ $TYPE == "PE" ]]; then
-    RUN=${PAIREDRUN}
+    RUN="${PAIREDRUN}"
       fi
   if [[ $TYPE == "SE" ]]; then
-    RUN=${SINGLERUN}
+    RUN="${SINGLERUN}"
     fi
 	
   ## ALign and filter:
-  eval ${RUN} | \
+  eval "${RUN}" | \
   samblaster --ignoreUnmated | \
   sambamba view -f bam -S -l 5 -t 2 -o /dev/stdout /dev/stdin | \
-  tee >(sambamba flagstat -t 2 /dev/stdin > ${BASENAME}_raw.flagstat) | \
-  sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
+  tee >(sambamba flagstat -t 2 /dev/stdin > "${BASENAME}"_raw.flagstat) | \
+  sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o "${BASENAME}"_raw.bam /dev/stdin  
   
-  BamCheck ${BASENAME}_raw.bam
-  mtDNA ${BASENAME}_raw.bam
+  BamCheck "${BASENAME}"_raw.bam
+  mtDNA "${BASENAME}"_raw.bam
   
   ## 1) remove non-primary chromosomes, low qual. and non-primary alignments, but keep duplicates:
   if [[ ! -e tmp_chromSizes.txt ]]; then
-    samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
+    samtools idxstats "${BASENAME}"_raw.bam > tmp_chromSizes.txt
     fi
   
-  if [[ $TYPE == "PE" ]]; then
+  if [[ "${TYPE}" == "PE" ]]; then
     NUMFILTER=1
     fi
-  if [[ $TYPE == "SE" ]]; then
+  if [[ "${TYPE}" == "SE" ]]; then
     NUMFILTER=0
     fi
 		
-  samtools idxstats ${BASENAME}_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
-  xargs sambamba view -l 5 -f bam -t 8 --num-filter=${NUMFILTER}/2308 --filter='mapping_quality > 19' \
-  -o /dev/stdout ${BASENAME}_raw.bam | \
-  tee ${BASENAME}_dup.bam | \
-  tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
+  samtools idxstats "${BASENAME}"_raw.bam | cut -f 1 | grep -vE 'chrM|_random|chrU|chrEBV|\*' | \
+  xargs sambamba view -l 5 -f bam -t 8 --num-filter="${NUMFILTER}"/2308 --filter='mapping_quality > 19' \
+  -o /dev/stdout "${BASENAME}"_raw.bam | \
+  tee "${BASENAME}"_dup.bam | \
+  tee >(samtools index - "${BASENAME}"_dup.bam.bai) | \
   sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
-  tee >(tee ${BASENAME}_dedup.bam | samtools index - ${BASENAME}_dedup.bam.bai) | \
+  tee >(tee "${BASENAME}"_dedup.bam | samtools index - "${BASENAME}"_dedup.bam.bai) | \
   bedtools bamtobed -i - | \
   mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
   sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 |
-  tee >(bgzip -@ 6 > ${BASENAME}_cutsites.bed.gz) | \
+  tee >(bgzip -@ 6 > "${BASENAME}"_cutsites.bed.gz) | \
   bedtools genomecov -bg -i - -g tmp_chromSizes.txt | \
-  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${BASENAME}_cutsites_noScale.bigwig
+  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${BASENAME}"_cutsites_noScale.bigwig
   
-  BamCheck ${BASENAME}_dup.bam
+  BamCheck "${BASENAME}"_dup.bam
   
-  ls ${BASENAME}*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
+  ls "${BASENAME}"*dup.bam | parallel "sambamba flagstat -t 8 {} > {.}.flagstat"
   
-  BamCheck ${BASENAME}_dedup.bam
+  BamCheck "${BASENAME}"_dedup.bam
     
-  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'ended on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' "${1}" 'in' "${IND}" 'ended on') <(date))
 
 }
 
@@ -247,7 +247,7 @@ function SizeFactor {
   ## count matrix
   featureCounts --read2pos 5 -a genome_windows.saf -F SAF -T 8 -o genome_windows_counts.txt *_dedup.bam
    
-  cat genome_windows_counts.txt | $RSCRIPT sizeFactors.R
+  cat genome_windows_counts.txt | "${RSCRIPT}" sizeFactors.R
   
   (>&2 paste -d " " <(echo '[INFO] SizeFactor ended on') <(date))
   
@@ -257,9 +257,9 @@ function SizeFactor {
 
 function Bigwig {
 
-  FILE=$1
+  FILE="${1}"
     
-  (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' $1 'started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' "${1}" 'started on') <(date))
   
   ## bamcoverage multiplies with the size factor but deseq2 divides so invert the deseq factor:
   if [[ $(cat sizeFactors.txt | wc -l | xargs) > 1 ]]; then
@@ -272,12 +272,12 @@ function Bigwig {
     fi
   
   ## Bigwig with 80bp fragments to smooth the signal:
-  bigWigToBedGraph $FILE /dev/stdout | \
+  bigWigToBedGraph "${FILE}" /dev/stdout | \
   bedtools slop -b 40 -g tmp_chromSizes.txt -i - | \
-  bedtools genomecov -g tmp_chromSizes.txt -i - -bg -scale ${FACTOR} | \
-  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${FILE%_noScale.bigwig}_geomean.bigwig
+  bedtools genomecov -g tmp_chromSizes.txt -i - -bg -scale "${FACTOR}" | \
+  bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${FILE%_noScale.bigwig}"_geomean.bigwig
   
-  (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' $1 'ended on') <(date))
+  (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' "${1}" 'ended on') <(date))
   
 }; export -f Bigwig  
 
@@ -286,16 +286,16 @@ function Bigwig {
 ## Count fraction of cutting sites in Genrich peaks:
 function FRiP {
   
-  PEAKS=$1
-  CUTSITES=$2
+  PEAKS="${1}"
+  CUTSITES="${2}"
   
-  if [[ -e $1 ]] && [[ -e $2 ]]; then
-    TOTAL=$(pigz -c -d -p 4 $CUTSITES | wc -l)
+  if [[ -e "${1}" ]] && [[ -e "${2}" ]]; then
+    TOTAL=$(pigz -c -d -p 4 "${CUTSITES}" | wc -l)
     READ=$(bedtools intersect \
-           -a $CUTSITES \
-           -b $PEAKS -u \
+           -a "${CUTSITES}" \
+           -b "${PEAKS}" -u \
            -wa -sorted | wc -l)
-     paste <(echo ${2%_cutsites.bed.gz}) <(bc <<< "scale=6;$READ/$TOTAL") 
+     paste <(echo "${2%_cutsites.bed.gz}") <(bc <<< "scale=6;$READ/$TOTAL") 
      fi
 
 }; export -f FRiP
@@ -303,7 +303,7 @@ function FRiP {
 ####################################################################################################################################
 
 ## fastqc:
-ls *fastq.gz | parallel -j 64 "fastqc -t 1 {}"
+ls *fastq.gz | parallel -j 70 "fastqc -t 1 {}"
 
 ####################################################################################################################################
 
@@ -345,25 +345,27 @@ if [[ $(ls *_cutsites_noScale.bigwig | wc -l) > 1 ]];
 ####################################################################################################################################
 
 ## Insert Sizes given paired-end data:
-if [[ $MODE == "PE" ]]; then
+if [[ "${MODE}" == "PE" ]]; then
 (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
 
 ls *_dedup.bam | \
-  parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
-  (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
+  parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf \
+            QUIET=true VERBOSITY=ERROR VALIDATION_STRINGENCY=LENIENT 2> /dev/null"
+	    
+  (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes ended on') <(date))
   fi
 
 ####################################################################################################################################
 
 ## Library Complexity:
-if [[ $MODE == "PE" ]]; then
+if [[ "${MODE}" == "PE" ]]; then
   (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
   ls *_dup.bam | \
   parallel "preseq c_curve -bam -pe -s 5e+05 -o {.}_ccurve.txt {}"
   (>&2 paste -d " " <(echo '[INFO] LibComplexity ended on') <(date))
   fi
   
-if [[ $MODE == "SE" ]]; then
+if [[ "${MODE}" == "SE" ]]; then
   (>&2 paste -d " " <(echo '[INFO] LibComplexity started on') <(date))
   ls *_dup.bam | \
   parallel "preseq c_curve -bam -s 5e+05 -o {.}_ccurve.txt {}"
