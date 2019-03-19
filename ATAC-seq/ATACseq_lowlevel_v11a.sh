@@ -381,7 +381,8 @@ if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 ## Call Peaks:
 ls *_cutsites.bed.gz | awk -F "_cutsites.bed.gz" '{print $1}' | sort -u | \
   parallel "$MACS callpeak -t {}_cutsites.bed.gz -n {}_FDR1perc_unfiltered -g $GFLAG \
-                  --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01"
+                  --extsize 100 --shift -50 --nomodel --keep-dup=all -f BED --call-summits -q 0.01 \
+		  --min-length 150"
 
 ## Filter against blacklist:
 ls *_FDR1perc_unfiltered_peaks.narrowPeak | \
