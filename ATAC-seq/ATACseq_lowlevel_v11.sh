@@ -395,16 +395,14 @@ ls *_FDR1perc_unfiltered_summits.bed | \
                                   -b ${BLACKLIST} > {}_FDR1perc_filtered_summits.bed"
 				  
 function GSUB {
-
-  NAME=$(echo "${1}" | rev | awk -F "." '{print $2}' | rev)
-  SUF=$(echo "${1}" | rev | awk -F "." '{print $1}' | rev)
-  
-  awk 'OFS="\t" {gsub("unfiltered","filtered");print}' "${1}" > "${NAME}"_tmpRename
-  mv "${NAME}"_tmpRename "${NAME}"."${SUF}"
+	
+  awk 'OFS="\t" {gsub("unfiltered","filtered");print}' "${1}" > "${1}".tmp
+  mv "${1}".tmp "${1}"
   
 }; export -f GSUB
 
-ls *_FDR1perc_filtered* | parallel "GSUB {}"
+find -maxdepth 1 -name "*_filt*" -printf '%f\n' | \
+  parallel "GSUB {}"
 		  
 ####################################################################################################################################
 
