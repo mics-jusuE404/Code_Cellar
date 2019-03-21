@@ -78,7 +78,7 @@ if (ncol(counts) == 7) {
 }
 
 ## get rowMeans
-counts <- data.frame(counts, rowMean = rowMeans(counts[,7:ncol(counts)]))
+counts <- data.frame(counts, rowMean = rowMeans(counts[,7:ncol(counts)]), check.names=F)
 
 ## sort by rowMeans
 counts <- counts[with(counts, order(-rowMean)),]
