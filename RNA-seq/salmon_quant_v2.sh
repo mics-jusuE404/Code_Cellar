@@ -16,6 +16,7 @@
 
 ## Use Salmon on FASTQ files, providing the basename:
 IDX="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/salmonIDX_Gencode_M20_k31"
+MODE="PE"
 
 ###################################################################################################################
 
@@ -44,14 +45,32 @@ function SALMON {
     echo '[ERROR]: At least on of the input files is missing for' $1 && exit 1
     fi
   
-  salmon quant \
-    -l A -i $2 -p 8 \
-    --no-version-check \
-    --validateMappings \
-    --maxMMPExtension 7 \
-    --seqBias \
-    --gcBias \
-    -o ${1}_salmonK31 -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
+  if [[ ${3} == "PE" ]]; then
+  
+    salmon quant \
+      -l A -i $2 -p 8 \
+      --no-version-check \
+      --validateMappings \
+      --maxMMPExtension 7 \
+      --seqBias \
+      --gcBias \
+      -o ${1}_salmon -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
+      
+      fi
+      
+   if [[ ${3} == "SE" ]]; then
+  
+    salmon quant \
+      -l A -i $2 -p 8 \
+      --no-version-check \
+      --validateMappings \
+      --maxMMPExtension 7 \
+      --seqBias \
+      -o ${1}_salmon -r ${1}.fastq.gz
+      
+      fi
+      
+         
   
 }; export -f SALMON
 
@@ -63,4 +82,4 @@ if [[ "$(ls *.fastq.gz 2>/dev/null | wc -l)" == 0 ]]; then
   fi
 
 echo "[INFO]: This is" $(salmon --version)
-ls *_1.fastq.gz | awk -F "_1" '{print $1}' | parallel -j 8 "SALMON {} $IDX 2> {}_salmon.log"
+ls *_1.fastq.gz | awk -F "_1" '{print $1}' | parallel -j 8 "SALMON {} $IDX ${MODE} 2> {}_salmon.log"
