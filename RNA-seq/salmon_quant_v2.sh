@@ -82,4 +82,11 @@ if [[ "$(ls *.fastq.gz 2>/dev/null | wc -l)" == 0 ]]; then
   fi
 
 echo "[INFO]: This is" $(salmon --version)
-ls *_1.fastq.gz | awk -F "_1" '{print $1}' | parallel -j 8 "SALMON {} $IDX ${MODE} 2> {}_salmon.log"
+
+if [[ ${MODE} == "PE" ]]; then
+  ls *_1.fastq.gz | awk -F "_1.fastq" '{print $1}' | parallel -j 8 "SALMON {} $IDX ${MODE} 2> {}_salmon.log"
+  fi
+  
+if [[ ${MODE} == "SE" ]]; then
+  ls *.fastq.gz | awk -F ".fastq" '{print $1}' | parallel -j 8 "SALMON {} $IDX ${MODE} 2> {}_salmon.log"
+  fi
