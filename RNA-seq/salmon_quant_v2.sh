@@ -41,12 +41,12 @@ fi
 
 function SALMON {
   
-  if [[ ! -e ${1}_1.fastq.gz || ! -e ${1}_2.fastq.gz ]]; then
-    echo '[ERROR]: At least on of the input files is missing for' $1 && exit 1
-    fi
-  
   if [[ ${3} == "PE" ]]; then
   
+    if [[ ! -e ${1}_1.fastq.gz || ! -e ${1}_2.fastq.gz ]]; then
+    echo '[ERROR]: At least on of the input files is missing for' $1 && exit 1
+    fi
+    
     salmon quant \
       -l A -i $2 -p 8 \
       --no-version-check \
@@ -59,14 +59,18 @@ function SALMON {
       fi
       
    if [[ ${3} == "SE" ]]; then
+   
+     if [[ ! -e ${1}.fastq.gz ]]; then
+      echo '[ERROR]: At least on of the input files is missing for' $1 && exit 1
+      fi
   
-    salmon quant \
-      -l A -i $2 -p 8 \
-      --no-version-check \
-      --validateMappings \
-      --maxMMPExtension 7 \
-      --seqBias \
-      -o ${1}_salmon -r ${1}.fastq.gz
+      salmon quant \
+        -l A -i $2 -p 8 \
+        --no-version-check \
+        --validateMappings \
+        --maxMMPExtension 7 \
+        --seqBias \
+        -o ${1}_salmon -r ${1}.fastq.gz
       
       fi
       
