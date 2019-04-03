@@ -217,7 +217,7 @@ function Fq2Bam {
   tee >(tee "${BASENAME}"_dedup.bam | samtools index - "${BASENAME}"_dedup.bam.bai) | \
   bedtools bamtobed -i - | \
   mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' | \
-  sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 |
+  sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 | \
   tee >(bgzip -@ 6 > "${BASENAME}"_cutsites.bed.gz) | \
   bedtools genomecov -bg -i - -g tmp_chromSizes.txt | \
   bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${BASENAME}"_cutsites_noScale.bigwig
