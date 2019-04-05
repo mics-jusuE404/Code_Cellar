@@ -74,8 +74,8 @@ function BamCheck {
     
   ## Also check if file is not empty:
   if [[ $(samtools view $1 | head -n 1 | wc -l) < 1 ]]; then
-  ExitBam $BASENAME
-  fi
+    ExitBam $BASENAME
+    fi
   
 }; export -f BamCheck  
 
@@ -150,8 +150,7 @@ function Fq2Bam {
   -o /dev/stdout ${BASENAME}_raw.bam | \
   tee ${BASENAME}_dup.bam | \
   tee >(samtools index - ${BASENAME}_dup.bam.bai) | \
-  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin | \
-  tee >(tee ${BASENAME}_dedup.bam | samtools index - ${BASENAME}_dedup.bam.bai) 
+  sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o ${BASENAME}_dedup.bam /dev/stdin | \
   
   BamCheck ${BASENAME}_dup.bam
   
@@ -195,6 +194,7 @@ function FRiP {
     ASSIGNED=$(grep -w 'Assigned' ${PEAKS}_fc.txt.summary | cut -f2)
     UNASSIGNED=$(grep -w 'Unassigned_NoFeatures' ${PEAKS}_fc.txt.summary | cut -f2)
     
+    rm ${PEAKS}_fc.txt ${PEAKS}_fc.txt.summary
     
     paste <(echo "${PEAKS%_noControl*}") <(bc <<< "scale=6;${ASSIGNED}/(${ASSIGNED}+${UNASSIGNED})")
     fi
@@ -225,10 +225,11 @@ if [[ $MODE == "SE" ]]; then
 
 ## Insert Sizes given paired-end data:
 if [[ $MODE == "PE" ]]; then
-(>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
+  (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
 
-ls *_dedup.bam | \
-  parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
+  ls *_dedup.bam | \
+    parallel "picard CollectInsertSizeMetrics I={} O={.}_InsertSizes.txt H={.}_InsertSizes.pdf QUIET=true VERBOSITY=ERROR 2> /dev/null"
+  
   (>&2 paste -d " " <(echo '[INFO] CollectInsertSizes started on') <(date))
   fi
 
