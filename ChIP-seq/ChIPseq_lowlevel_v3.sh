@@ -174,14 +174,23 @@ function FRiP {
   
   PEAKS=$1
   BAM=$2
+  MODE=$3
   
   if [[ -e $1 ]] && [[ -e $2 ]]; then
+  
+    if [[ ${MODE} == "PE" ]]; then
+      INS="-p"
+      fi
+    if [[ ${MODE} == "SE" ]]; then
+      INS=""
+      fi 
+      
     
     ## Peak to SAF:
     awk 'OFS="\t" {print $1$2$3, $1, $2+1, $3, "+"}' ${PEAKS} > ${PEAKS}.saf
     
     ## Count with featureCounts:
-    featureCounts -p -T 16 -a ${PEAKS}.saf -F SAF -o ${PEAKS}_fc.txt $BAM
+    featureCounts "${INS}" -T 16 -a ${PEAKS}.saf -F SAF -o ${PEAKS}_fc.txt $BAM
     
     ASSIGNED=$(grep -w 'Assigned' ${PEAKS}_fc.txt.summary | cut -f2)
     UNASSIGNED=$(grep -w 'Unassigned_NoFeatures' ${PEAKS}_fc.txt.summary | cut -f2)
@@ -257,7 +266,7 @@ ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | sort -u | \
 
 ls *_noControl_peaks.narrowPeak | \
   awk -F "_noControl" '{print $1}' | \
-  parallel -j 4 "FRiP {}_noControl_peaks.narrowPeak {}_dedup.bam 2>> {}.log" > FRiP_scores.txt
+  parallel -j 4 "FRiP {}_noControl_peaks.narrowPeak {}_dedup.bam ${MODE} 2>> {}.log" > FRiP_scores.txt
   
 (>&2 paste -d " " <(echo '[INFO] FRiP score calculation endedn on') <(date))
 
