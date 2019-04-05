@@ -91,7 +91,7 @@ function Fq2Bam {
     IND="paired-end mode"
     fi
   if [[ $TYPE == "SE" ]]; then
-    IND="paired-end mode"
+    IND="single-end mode"
     fi
 			
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'started on') <(date))
@@ -132,8 +132,7 @@ function Fq2Bam {
   sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o ${BASENAME}_raw.bam /dev/stdin  
   
   BamCheck ${BASENAME}_raw.bam
-  mtDNA ${BASENAME}_raw.bam
-  
+    
   ## 1) remove non-primary chromosomes, low qual. and non-primary alignments, but keep duplicates:
   if [[ ! -e tmp_chromSizes.txt ]]; then
     samtools idxstats ${BASENAME}_raw.bam > tmp_chromSizes.txt
@@ -160,7 +159,7 @@ function Fq2Bam {
   
   BamCheck ${BASENAME}_dedup.bam
   
-  bamCoverage --bam ${BASENAME}_dedup.bam -o ${BASENAME}_dedup_CPM.bigwig --normalizeUsing CPM -bs 1 -e 300
+  bamCoverage --bam ${BASENAME}_dedup.bam -o ${BASENAME}_dedup_CPM.bigwig --normalizeUsing CPM -bs 1 -e 200
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'ended on') <(date))
 
@@ -174,16 +173,22 @@ export -f Fq2Bam
 function FRiP {
   
   PEAKS=$1
-  CUTSITES=$2
+  BAM=$2
   
   if [[ -e $1 ]] && [[ -e $2 ]]; then
-    TOTAL=$(pigz -c -d -p 4 $CUTSITES | wc -l)
-    READ=$(bedtools intersect \
-           -a $CUTSITES \
-           -b $PEAKS -u \
-           -wa -sorted | wc -l)
-     paste <(echo ${2%_cutsites.bed.gz}) <(bc <<< "scale=6;$READ/$TOTAL") 
-     fi
+    
+    ## Peak to SAF:
+    awk 'OFS="\t" {print $1$2$3, $1, $2+1, $3, "+"}' ${PEAKS} > ${PEAKS}.saf
+    
+    ## Count with featureCounts:
+    featureCounts -p -T 16 -a ${PEAKS}.saf -F SAF -o ${PEAKS}_fc.txt $BAM
+    
+    ASSIGNED=$(grep -w 'Assigned' ${PEAKS}_fc.txt.summary | cut -f2)
+    UNASSIGNED=$(grep -w 'Unassigned_NoFeatures' ${PEAKS}_fc.txt.summary | cut -f2)
+    
+    
+    paste <(echo "${PEAKS%_noControl*}") <(bc <<< "scale=6;${ASSIGNED}/(${ASSIGNED}+${UNASSIGNED})")
+    fi
 
 }; export -f FRiP
 
@@ -243,27 +248,16 @@ if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
 ## Call Peaks:
 ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | sort -u | \
-  parallel "$MACS callpeak -t {}_dedup.bam -n {}_unfiltered -g $GFLAG"
-
-## Filter against blacklist:
-ls *_unfiltered_peaks.narrowPeak | \
-  awk -F "_unfiltered_peaks.narrowPeak" '{print $1}' | \
-  parallel "bedtools intersect -v -a {}_unfiltered_peaks.narrowPeak \
-                                  -b ${BLACKLIST} > {}_filtered_peaks.narrowPeak"
-				  
-ls *_unfiltered_summits.bed | \
-  awk -F "_unfiltered_summits.bed" '{print $1}' | \
-  parallel "bedtools intersect -v -a {}_FDR1perc_unfiltered_summits.bed \
-                                  -b ${BLACKLIST} > {}_filtered_summits.bed"				  
+  parallel "$MACS callpeak -t {}_dedup.bam -n {}_noControl -g $GFLAG"  
 		  
 ####################################################################################################################################
 
 ## FRiP:
 (>&2 paste -d " " <(echo '[INFO] FRiP score calculation started on') <(date))
 
-ls *cutsites.bed.gz | \
-  awk -F "_cutsites.bed.gz" '{print $1}' | \
-  parallel "FRiP {}_peaks_.narrowPeak {}_cutsites.bed.gz" > FRiP_scores.txt
+ls *_noControl_peaks.narrowPeak | \
+  awk -F "_noControl" '{print $1}' | \
+  parallel -j 4 "FRiP {}_noControl_peaks.narrowPeak {}_dedup.bam 2>> {}.log" > FRiP_scores.txt
   
 (>&2 paste -d " " <(echo '[INFO] FRiP score calculation endedn on') <(date))
 
