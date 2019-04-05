@@ -159,7 +159,7 @@ function Fq2Bam {
   
   BamCheck ${BASENAME}_dedup.bam
   
-  bamCoverage --bam ${BASENAME}_dedup.bam -o ${BASENAME}_dedup_CPM.bigwig --normalizeUsing CPM -bs 1 -e 200
+  bamCoverage --bam ${BASENAME}_dedup.bam -p 16 -o ${BASENAME}_dedup_CPM.bigwig --normalizeUsing CPM -bs 1 -e 200
   
   (>&2 paste -d " " <(echo '[INFO]' 'Fq2Bam for' $1 'in' ${IND} 'ended on') <(date))
 
@@ -256,8 +256,11 @@ if [[ $GENOME == "mm10" ]]; then GFLAG="mm"; fi
 if [[ $GENOME == "hg38" ]]; then GFLAG="hs"; fi
 
 ## Call Peaks:
+if [[ $MODE == "PE" ]]; then FORMAT=BAMPE; fi
+if [[ $MODE == "SE" ]]; then FORMAT=BAM; fi
+
 ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | sort -u | \
-  parallel "$MACS callpeak -t {}_dedup.bam -n {}_noControl -g $GFLAG"  
+  parallel "$MACS callpeak -t {}_dedup.bam -n {}_noControl -g $GFLAG -f ${FORMAT}" 2> macs_reports.log  
 		  
 ####################################################################################################################################
 
