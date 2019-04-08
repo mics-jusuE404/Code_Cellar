@@ -17,6 +17,7 @@
 
 ## Due to different conda envs (macs2 needs py27, and Rscript is in R env), some things have to be set explicitely:
 
+UBAM="n"
 GENOME="mm10"
 MODE="PE"
 JOBS=4
@@ -299,6 +300,16 @@ function FRiP {
      fi
 
 }; export -f FRiP
+
+####################################################################################################################################
+
+## uBam:
+if [[ $UBAM == "y" ]]; then
+  ls *_ubam.bam | \
+    awk -F "_ubam.bam" '{print $1}' | parallel "samtools fastq -1 {}_1.fastq.gz -2 {}_2.fastq.gz -@ 6 {}_ubam.bam 2>> {}.log"
+  mkdir uBam
+  mv *_ubam.bam ./uBam
+  fi
 
 ####################################################################################################################################
 
