@@ -18,6 +18,10 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
                                NORM="largebins", GROUP, CONTRASTS, 
                                CORES=c(detectCores()-2)){
   
+  library(csaw)
+  library(GenomicAlignments)
+  library(data.table)
+  
   #################################################################################################################
   message("")
   message("[STARTED]: ", NAME)
@@ -167,7 +171,6 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
   
   message("[ENDED]: ", NAME)
   message("")
-                                               
 }
 
 ###################################################################################################################
