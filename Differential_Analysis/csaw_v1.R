@@ -64,13 +64,15 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
     x <- correlateReads(BAMS, max.delay, param=PARAM)
     FRAGLEN <- maximizeCcf(x)
     
+    assign(paste(NAME, "_fraglength", sep=""), FRAGLEN, envir = .GlobalEnv)
+    
     ## Save xcorrplot:
     if (FRAGLEN > 0){
-      plot.new()
+      plot(0:max.delay, x, type="l", ylab="CCF", xlab="Delay (bp)")
       assign( paste(NAME, "_plot_xcorr", sep=""), 
-              recordPlot(plot(0:max.delay, x, type="l", ylab="CCF", xlab="Delay (bp)")),
+              recordPlot(),
               envir = .GlobalEnv)
-    }; dev.off()
+    }
     
   } 
   
@@ -194,14 +196,3 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
   message("")
   
 }
-
-## Example:
-BLACKLIST <- fread("/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", data.table = F, header = F)
-PU1_Summits <- fread("peaks/PU.1_combinedCall_summits.bed", data.table = F)  
-PU1_Bams <- list.files(path='~/IMTB/Fischer2019/ChIP-seq/bam/', pattern=glob2rx("PU.1*.bam"), full.names = T)
-
-run_csaw_peakBased(NAME = "PU1", SUMMITS = PU1_Summits, 
-                   WIDTH = 200,  BAMS = PU1_Bams, 
-                   PAIRED = F,   GROUP = c("Ca", "Ca", "Wt", "Wt"), 
-                   CONTRASTS = c("Ca-Wt"), FRAGLEN = 180, 
-                   NORM = "largebins", UNREP = F, CORES=14)
