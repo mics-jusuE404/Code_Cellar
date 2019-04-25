@@ -13,7 +13,7 @@ Volcano_AT <- function(DFresults, FC="logFC", pval="FDR",
   which.up <- which( DFresults[,which(colnames(DFresults)==pval)] < p.thres &
                        DFresults[,which(colnames(DFresults)==FC)] > fc.thres )
   which.dw <- which( DFresults[,which(colnames(DFresults)==pval)] < p.thres &
-                       DFresults[,which(colnames(DFresults)==FC)] < fc.thres )
+                       DFresults[,which(colnames(DFresults)==FC)] < -fc.thres )
   
   ## Main plot in grey:
   plot(x = DFresults[,which(colnames(DFresults)==FC)],
