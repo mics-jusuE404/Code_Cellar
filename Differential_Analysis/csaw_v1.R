@@ -4,9 +4,11 @@
 run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200, 
                                BAMS, FRAGLEN="", PAIRED=F, 
                                NORM="largebins", GROUP, CONTRASTS, 
-                               CORES=c(detectCores()-2), UNREP=F){
+                               CORES=c(detectCores()-2), UNREP=F,
+                               RERUN=F){
   
   library(csaw)
+  library(edgeR)
   library(GenomicAlignments)
   library(data.table)
   
@@ -14,20 +16,39 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
   message("")
   message("[STARTED]: ", NAME)
   
+  ## message if unreplicated design:
   if (UNREP == T) message("[INFO] Running on unreplicated data!")
   
+  ## message if no name given in function
   if ( (NAME == "") || (CONTRASTS == "") || (GROUP == "") ){
     stop("Please enter a {NAME} for the analysis -- Exiting")
     break
   }
   
+  ## stop if paired end specified as not impemented yet
   if (PAIRED == T) {
     stop("Paired-end mode not yet implemented -- Exiting")
     break
   }
-
- 
+  
+  ## RERUN=F means run everything as usual, T would be to skip all counting part and do edgeR right away.
+  ## can be useful if MA plots show that normalization was not good and one simply wants to repeat edgeR with 
+  ## the existing counts but a different normalization
+  if (RERUN == F) {
+    assign( paste(NAME, "rerun_check", sep=""), c(1), envir = .GlobalEnv)
+  }
+  
+  if (RERUN == T) {
+    if ( ! exists( paste(NAME, "rerun_check", sep="") ) ) {
+      stop("RERUN was set to TRUE but function has not been run before")
+    } else {
+      message("Skipping upstream part and starting with edgeR part right away")
+    }
+  }
+      
   #################################################################################################################
+  if (RERUN == F) {
+    
   ## Take summits and extend to desired window size
   if ( class(SUMMITS) != "GRanges") {
     tmp.gr <- GRanges(seqnames = SUMMITS[,1],
@@ -48,6 +69,7 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
     
   if (PAIRED == F) PSE="none"
   
+  ## PARAM, discarding blacklisted regions
   PARAM=readParam(BPPARAM = MulticoreParam(workers = CORES), 
                   discard = makeGRangesFromDataFrame(df = BLACKLIST, 
                                                      seqnames.field = "V1",
@@ -86,15 +108,8 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
   
   #################################################################################################################
   ## Normalize
-  if (NORM == "largebins"){
-    message("Calculating normalization factors")
-    binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
-    data <- normFactors(binned, se.out=data)
-  }
-  
-  if (NORM == "peaks") {
-    data <- normFactors(data, se.out=data)
-  }
+  message("Calculating normalization factors")
+  binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
   
   ## Save counts and put in colnames:
   strReverse <- function(x){
@@ -102,21 +117,48 @@ run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200,
   }
   file.names <- as.character(strReverse(sapply(strReverse(BAMS), function(x) strsplit(x, split = "\\/")[[1]][1])))
   
-  RAWcounts <- data.frame(assay(data)); colnames(RAWcounts) <- file.names
-  CPMcounts <- data.frame(calculateCPM(data, log = F)); colnames(CPMcounts) <- file.names
+  RAWcounts <- data.frame(assay(data))
+  colnames(RAWcounts) <- file.names
+  
+  CPMcountsPeaks <- data.frame( calculateCPM(object = normFactors(data, se.out=data), use.norm.factors = T, log = F) )
+  colnames(CPMcountsPeaks) <- file.names
+  
+  CPMcountsBins  <- data.frame( calculateCPM(object = normFactors(binned, se.out=data), use.norm.factors = T, log = F) )
+  colnames(CPMcountsBins) <- file.names
+  
+  if (NORM == "peaks") {
+    data <- normFactors(data, se.out=data)
+  }
+  
+  if (NORM == "largebins") {
+    data <- normFactors(binned, se.out=data)
+  }
   
   ## Save counts:
   assign( paste(NAME, "_data_countsRAW", sep=""),
           RAWcounts, envir = .GlobalEnv)
-  assign( paste(NAME, "_data_countsCPM", sep=""),
-          CPMcounts, envir = .GlobalEnv)
   
-  ## MA plots for average over the conditions:
-  #assign( paste(NAME, "_plot_xcorr", sep=""), 
-  #        #MAPLOT code
-  #        envir = .GlobalEnv)
+  assign( paste(NAME, "_data_countsCPM_peaks", sep=""),
+          CPMcountsPeaks, envir = .GlobalEnv)
   
+  assign( paste(NAME, "_data_countsCPM_largebins", sep=""),
+          CPMcountsBins, envir = .GlobalEnv)
+  
+  } ## END OF RERUN
+  
+  ## Extra part for RERUN=T:
+  if (RERUN == T){
+    if (NORM == "peaks"){
+      message("RERUN set to TRUE -- using peak-derived normalization factors")
+      data <- normFactors(data, se.out=data)
+    }
+    if (NORM == "largebins"){
+      message("RERUN set to TRUE -- using largebin-derived normalization factors")
+      data <- normFactors(binned, se.out=data)
+    }
+  }
   #################################################################################################################
+  
   ## edgeR part:
   message("Running edgeR")
   
