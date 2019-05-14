@@ -1,5 +1,4 @@
 ## Template for differential analysis with csaw using called peaks as template for read counting and FDR control:
-## Wrapper to run csaw in peakbased mode:
 
 run_csaw_peakBased <- function(NAME="", SUMMITS, WIDTH=200, 
                                BAMS, FRAGLEN="", PAIRED=F, 
