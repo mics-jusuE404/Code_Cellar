@@ -1,1 +1,1 @@
-Lowlevel pipelines for \*-seq data
+Lowlevel pipeline for ATAC-seq data
