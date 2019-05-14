@@ -1,3 +1,3 @@
 # Bash_Bioinformatics
 
-Collection of bash scripts for NGS things.
+Collection of bash/R scripts for NGS things.
