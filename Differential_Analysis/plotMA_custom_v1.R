@@ -1,4 +1,6 @@
-## Template to make MA plots for all possible combinations:
+## Script to make MAplots accepting a 2-column count matrix as input.
+## Automatically chooses y-axis limits based on rounded quantiles unless uses overwrites this with YLIM.
+## Can use smoothScatter or heatScatter for plotting. The latter requires the LSD package.
 
 plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM=""){
   
