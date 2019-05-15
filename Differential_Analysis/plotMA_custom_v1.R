@@ -4,6 +4,12 @@
 
 plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM=""){
   
+  ## Check if LSD is installed:
+  if (MODE == "heatscatter" && !("LSD" %in% rownames(installed.packages()))){
+    message("LSD package is not installed, using smoothScatter instead")
+    MODE <- "smooth"
+  }
+  
   ## F if provided counts are on the regular (=non-log) scale
   if (LOGGED == F){
     R=COUNTS[,1]
