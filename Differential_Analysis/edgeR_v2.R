@@ -5,13 +5,26 @@ library(edgeR)
 library(csaw)
 options(scipen=999)
 
-setwd("~/Desktop")
-
-run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contrasts, NAME="", MAall = T){
+run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contrasts, NAME="", MAall = T, WD = "~/"){
+  
+  message("")
   
   if (NAME == "") stop("Please enter a sample name!")
   
-  message("Working directory is ", getwd())
+  if (WD != "~/"){
+    
+    if (dir.exists(WD)){
+      message("Enter working directory ", WD)
+      setwd(WD)
+    }
+    
+    if (!dir.exists(WD)){
+      message("Creating working directory ", WD)
+      dir.create(WD, showWarnings = T)
+      setwd(WD)
+    }
+    
+  }
   
   ## - TXI is the output of tximport()
   TXI <- txi
@@ -52,9 +65,8 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
        pch = 20, cex=0.8)
   text(mds$x, mds$y, labels=names(mds$x), cex= 0.7, pos=3)
   dev.off()
+  assign( paste(NAME, "_MDS", sep=""), mds, envir = .GlobalEnv)
   
-  
-  axis(1)
   ########################################################################################################################
   ## Define samples via COLDATA:
   y$group <- COLDATA
@@ -96,7 +108,7 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
     par(bty="n")
     smoothScatter(A, M, main = MAIN, bty="n",
                   xlab="mean of normalized counts",
-                  ylab="log2FC", ylim=YLIM)
+                  ylab="log2FC", ylim=YLIM, nbin = 200)
     abline(h=0)  
     
     
@@ -166,9 +178,8 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
       
       plotMA_custom(COUNTS = tmp.df, MAIN = paste("MA-plot: ", paste(tmp.combn[,i], collapse=" vs "), sep=""))
       
-    }; dev.off()
+    }; suppressMessages(dev.off())
   }
-    
 }
   
   
@@ -187,5 +198,5 @@ contr <- makeContrasts( KOuKOCa = FACTORIZEDB-FACTORIZEDA,
                         WUCaWTu = FACTORIZEDD-FACTORIZEDC ,
                         levels = design)
 
-run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "TEST", MAall = F)
+run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "Fischer2019", MAall = F, WD = "~/MUH")
 
