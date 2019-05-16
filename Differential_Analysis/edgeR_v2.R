@@ -92,7 +92,7 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
   
   ########################################################################################################################
   ## Produce MA plots, using the average per replicate group:
-  plotMA_custom <- function(COUNTS, MAIN = ""){
+  plotMA_custom <- function(COUNTS, MAIN = "", REPLACE.ZERO = 1){
     
     R=COUNTS[,1]
     G=COUNTS[,2]  
@@ -100,6 +100,9 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
     ## get mean of counts and log2FC
     M <- log2(R/G)
     A <- 0.5*log2(R*G)
+    
+    R[which(R == 0)] <- REPLACE.ZERO
+    G[which(G == 0)] <- REPLACE.ZERO
     
     ## Decide y-axis limits based on rounded quantiles
     YLIM <- c(floor(quantile(M, 0.0001, na.rm = T)), ceiling(quantile(M, 0.9999, na.rm = T)))
