@@ -102,7 +102,7 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
     A <- 0.5*log2(R*G)
     
     ## Decide y-axis limits based on rounded quantiles
-    YLIM <- c(floor(quantile(M, 0.0001)), ceiling(quantile(M, 0.9999)))
+    YLIM <- c(floor(quantile(M, 0.0001, na.rm = T)), ceiling(quantile(M, 0.9999, na.rm = T)))
     
     ## using smoothScatter
     par(bty="n")
