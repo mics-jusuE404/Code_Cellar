@@ -31,7 +31,6 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
   # filtering
   keep <- filterByExpr(y)
   y <- y[keep, ]
-  y# y is now ready for estimate dispersion functions see edgeR User's Guide
   
   ## Custom part: Export normalized counts following https://support.bioconductor.org/p/121087/
   message("Saving offset-corrected CPMs")
@@ -44,6 +43,18 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
   ## Export:
   assign( paste(NAME, "_CPM", sep=""), se.cpm, envir = .GlobalEnv)
   
+  ## Draw MDS:
+  mds <- plotMDS(x = calculateCPM(se, use.norm.factors = F, use.offsets = T, log = T), bty="n", cex = 0.8, plot = F)
+  
+  pdf(file = paste(NAME,"_MDSplot.pdf", sep="") , onefile=T, paper='A4r') 
+  plot(x = mds$x, y = mds$y, bty = "n", main = paste("MDS plot of ", NAME, sep=""), 
+       xlim = c(floor(min(mds$x)), ceiling(max(mds$x))), ylim = c(floor(min(mds$y)), ceiling(max(mds$y))),
+       pch = 20, cex=0.8)
+  text(mds$x, mds$y, labels=names(mds$x), cex= 0.7, pos=3)
+  dev.off()
+  
+  
+  axis(1)
   ########################################################################################################################
   ## Define samples via COLDATA:
   y$group <- COLDATA
@@ -177,3 +188,4 @@ contr <- makeContrasts( KOuKOCa = FACTORIZEDB-FACTORIZEDA,
                         levels = design)
 
 run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "TEST", MAall = F)
+
