@@ -29,7 +29,7 @@ plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM="
   
   ## Decide y-axis limits based on rounded quantiles
   if (YLIM[1] == ""){
-    YLIM <- c(floor(quantile(M, 0.0001)), ceiling(quantile(M, 0.9999)))
+    YLIM <- c(floor(quantile(M, 0.0001, na.rm=T)), ceiling(quantile(M, 0.9999, na.rm=T)))
   }
   
   ## using smoothScatter
