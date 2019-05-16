@@ -2,7 +2,7 @@
 ## Automatically chooses y-axis limits based on rounded quantiles unless uses overwrites this with YLIM.
 ## Can use smoothScatter or heatScatter for plotting. The latter requires the LSD package.
 
-plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM=""){
+plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM="", REPLACE.ZERO = 1){
   
   par(bty="n")
   ## Check if LSD is installed:
@@ -15,6 +15,9 @@ plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM="
   if (LOGGED == F){
     R=COUNTS[,1]
     G=COUNTS[,2]  
+    
+    R[which(R == 0)] <- REPLACE.ZERO
+    G[which(G == 0)] <- REPLACE.ZERO
   }
   
   ## T if counts are already on log2 scale
