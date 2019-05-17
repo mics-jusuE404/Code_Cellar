@@ -344,7 +344,8 @@ if [[ $(ls *_raw.bam | wc -l) > 1 ]];
   
 ####################################################################################################################################
 
-## Get browser tracks, scaled by the size factor from deseq:
+## Get browser tracks, scaled by the size factor from deseq (but only if more than one sample present,
+## else would be meaningless:
 if [[ $(ls *_cutsites_noScale.bigwig | wc -l) > 1 ]];
   then
   ls *_cutsites_noScale.bigwig | awk -F "_cutsites_noScale.bigwig" '{print $1}' | \
