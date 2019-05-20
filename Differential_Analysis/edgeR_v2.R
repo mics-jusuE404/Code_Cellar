@@ -161,27 +161,66 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
     }
   }
   
-  if (MAall == T){
+  if (MAall == N){
+    if (MAall == F){
+      message("Printing MA plots averaged over replicates")
+      
+      if ("FALSE" %in% grepl("rep", colnames(se.cpm))) message("Warning: Not all sample names end with _rep* -- skipping MAplot part!")
+      
+      ## If naming convention *_rep* is ok, proceed:
+      if( length( grep("FALSE", grepl("rep", colnames(se.cpm))) ) == 0){
+        
+        ## Average all replicates per condition:
+        names.unique <- unique(sapply(strsplit(colnames(se.cpm), split="_rep"), function(x) x[1]))
+        
+        ## Make all pairwise comparisons:
+        tmp.combn <- combn(x = names.unique, m = 2)
+        
+        pdf(file = paste(NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
+        par(mfrow=c(1,1), bty="n")
+        for (i in 1:ncol(tmp.combn)){
+          
+          one <- se.cpm[,grep(tmp.combn[1,i], colnames(se.cpm))]
+          two <- se.cpm[,grep(tmp.combn[2,i], colnames(se.cpm))]
+          
+          if (ncol(one) == 1) average.one <- one
+          if (ncol(one) > 1) average.one <- rowMeans(one)
+          if (ncol(two) == 1) average.two <- two
+          if (ncol(two) > 1) average.two <- rowMeans(two)
+         
+          ## MA:
+          tmp.df <- data.frame(average.one, average.two)
+          colnames(tmp.df) <- tmp.combn[,i]
+          
+          
+          plotMA_custom(COUNTS = tmp.df, MAIN = paste("Sample: ", paste(tmp.combn[,i], collapse=" vs "), sep=""))
+          
+        }; dev.off()
+      }
+    }
     
-    message("Printing MA plots for all sample combinations")
-    
-    tmp.combn <- combn(x = colnames(se.cpm), m = 2)
-    
-    pdf(file = paste(NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
-    par(mfrow=c(1,1), bty="n")
-    for (i in 1:ncol(tmp.combn)){
+    if (MAall == T){
       
-      one <- se.cpm[,grep(tmp.combn[1,i], colnames(se.cpm))]
-      two <- se.cpm[,grep(tmp.combn[2,i], colnames(se.cpm))]
+      message("Printing MA plots for all sample combinations")
       
-      ## MA:
-      tmp.df <- data.frame(one, two)
-      colnames(tmp.df) <- tmp.combn[,i]
+      tmp.combn <- combn(x = colnames(se.cpm), m = 2)
       
-      
-      plotMA_custom(COUNTS = tmp.df, MAIN = paste("MA-plot: ", paste(tmp.combn[,i], collapse=" vs "), sep=""))
-      
-    }; suppressMessages(dev.off())
+      pdf(file = paste(NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
+      par(mfrow=c(1,1), bty="n")
+      for (i in 1:ncol(tmp.combn)){
+        
+        one <- se.cpm[,grep(tmp.combn[1,i], colnames(se.cpm))]
+        two <- se.cpm[,grep(tmp.combn[2,i], colnames(se.cpm))]
+        
+        ## MA:
+        tmp.df <- data.frame(one, two)
+        colnames(tmp.df) <- tmp.combn[,i]
+        
+        
+        plotMA_custom(COUNTS = tmp.df, MAIN = paste("MA-plot: ", paste(tmp.combn[,i], collapse=" vs "), sep=""))
+        
+      }; suppressMessages(dev.off())
+    }
   }
 }
   
