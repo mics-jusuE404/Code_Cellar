@@ -161,7 +161,7 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
     }
   }
   
-  if (MAall == N){
+  if (MAall == "N"){
     if (MAall == F){
       message("Printing MA plots averaged over replicates")
       
