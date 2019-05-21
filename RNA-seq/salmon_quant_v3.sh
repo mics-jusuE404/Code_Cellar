@@ -17,6 +17,7 @@
 ## Use Salmon on FASTQ files, providing the basename:
 IDX="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/salmonIDX_Gencode_M20_k31"
 MODE="PE"
+TRIM="y"
 
 ###################################################################################################################
 
@@ -36,6 +37,23 @@ for i in $(echo ${TOOLS[*]}); do
 if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0 ]]; then
   echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1
 fi
+
+###################################################################################################################
+
+function Trim {
+
+  BASENAME=$1
+  cutadapt -j 4 -a AGATCGGAAGAG -A AGATCGGAAGAG -m 31 --max-n 0.1 \
+    -o ${BASENAME}_trimmed_1.fastq.gz \
+    -p ${BASENAME}_trimmed_2.fastq.gz \
+    ${BASENAME}_1.fastq.gz \
+    ${BASENAME}_2.fastq.gz
+    
+    if [[ ! -d untrimmed ]]; then mkdir untrimmed; fi
+    mv ${BASENAME}_1.fastq.gz untrimmed
+    mv ${BASENAME}_2.fastq.gz untrimmed
+    
+}; export -f Trim
 
 ###################################################################################################################
 
@@ -79,6 +97,12 @@ function SALMON {
 }; export -f SALMON
 
 ###################################################################################################################
+
+## Optional trimming:
+if [[ ${TRIM} == "y" ]]; then
+  ls *_1.fastq.gz | awk -F "_1.fastq" '{print $1}' | parallel -j 12 "Trim {} 2>> trimming_report.log
+  fi"
+  
 
 ## Run salmon:
 if [[ "$(ls *.fastq.gz 2>/dev/null | wc -l)" == 0 ]]; then
