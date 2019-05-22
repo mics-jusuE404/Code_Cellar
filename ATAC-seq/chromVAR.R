@@ -13,7 +13,7 @@ library(BiocParallel)
 library(chromVARmotifs)
 library(BSgenome.Mmusculus.UCSC.mm10)
 library(data.table)
-require(JASPAR2018)
+library(JASPAR2018)
 
 set.seed(2018)
 
@@ -22,7 +22,7 @@ register(MulticoreParam(16))
 
 ##############################################################################################################################
 
-## Function to load BED files as GRanges():
+## Function to load BED files as GRanges(), e.g. Bed2GR(BED = "path/to/foo.bed")
 Bed2GR <- function(BED){
   tmp.bed <- fread(BED, header = F, data.table = F)
   tmp_granges <- GRanges(seqnames=as.character(tmp.bed[,1]),
@@ -33,7 +33,7 @@ Bed2GR <- function(BED){
 
 ##############################################################################################################################
 
-## function (borrowed from chromVAR/TFBStools) to access JASPAR motifs (here the CORE vertebrate collection):
+## Function (borrowed from chromVAR/TFBStools) to access JASPAR motifs (here the CORE vertebrate collection):
 jaspar <- function (collection = "CORE", ...) 
 {
   opts <- list()
@@ -51,17 +51,18 @@ motifs_JASPAR2018 <- jaspar()
 ##############################################################################################################################
 
 ## Step 1 -- Read in a list of reference ATAC-seq regions.
-## For a two-condition comparison, I think the merge of the peak sets of both conditions is a good choice.
-## An option would be to subsample all BAM files to a common number of peaks, and then run macs2 with
-## macs2 callpeak -t *_subsamples.bam -n merged_PeakSet --nomodel --keep-dup=all -q 0.01 -f BAMPE
-## assuming paired-end and filtered (rm dups and non-primary chromosomes/alignments) BAMs.
-## Extend summit from narrowPeak by 200bp as recommended in the chromVAR manual:
+## The function will take narrowPeak (e.g. fro  macs2) and extend the summit by 200bp.
+## For this it is probably a good idea to merge all BAM files from the respective conditions
+## and then call peaks on this to get a good "average" summit position:
 
 peaks_200bp <- readNarrowpeaks(filename = "merged_PeakSet.narrowPeak", 
-                                         width = 200, 
-                                         non_overlapping = T)
+                               width = 200, 
+                               non_overlapping = T)
 
-## With this peak set, make a count matrix, filling in the BAMs and conditions:
+## With this peak set, make a count matrix, filling in the BAMs and conditions.
+## bam.list is a list with paths to the BAM files.
+## colData lists the conditions for each BAM, e.g. for 3 untreated and 3 treated samples could be,
+## c( rep("untreated", 3), rep("treated", 3) )
 peaks_counts          <- getCounts(alignment_files = c(bam.list), 
                                    peaks           = peaks_untreated_200bp, 
                                    paired          = TRUE, 
@@ -71,7 +72,7 @@ peaks_counts          <- getCounts(alignment_files = c(bam.list),
 
 ##############################################################################################################################
 
-## Step 2 -- Define a function that runs the standard workflow, which is:
+## Step 2 -- Function that runs the standard workflow from chromVAR, which is:
 ## -preprocessing of the count matrix (adding GC bias, filtering for depth, all default options),
 ## -matching motifs to the regions
 ## -computeDeviations and computeVariability (output is Outname_deviation/variability)
@@ -102,7 +103,7 @@ Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome){
   
   tmp.vari <- computeVariability(object = tmp.dev)
   
-  ## if the deviation is negative, so less accessable in condition1, put a minus in front of the variablility score:
+  ## If the deviation from the mean is negative, so less accessable in condition1, put a minus in front of the variablility score:
   tmp.z <- assays(tmp.dev)$z
   tmp.means <- sapply(unique(tmp.dev$celltype), function(x) rowMeans(tmp.z[,grep(x, tmp.dev$celltype)]))
   tmp.direction <- as.numeric(which( tmp.means[,1] > tmp.means[,2] ))
@@ -115,10 +116,5 @@ Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome){
   )
 }
 
-## Step-3 -- Run the function:
-Bam2Deviation(FragmentCounts = peaks_counts, Peaks = peaks_200bp, Genome = BSgenome.Mmusculus.UCSC.mm10, Outname = "FOO")
-
-## Write results to disk:
-write.table(FOO_variability, sep="\t", quote = F, col.names = T, row.names = F, file="FOO_variability.tsv")
-
-##############################################################################################################################
+## Run it:
+Bam2Deviation(FragmentCounts = peaks_counts, Peaks = peaks_200bp, Genome = BSgenome.Mmusculus.UCSC.mm10, Outname = "FOO")                    
