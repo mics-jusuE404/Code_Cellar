@@ -1,4 +1,4 @@
-# Bash_Bioinformatics
+# Content:
 
 ## ATAC-seq
 Folder contains the low-level script to process ATAC-seq data including quality control, adapter trimming, alignment, peak calling, FRiP calculation, bigwig creation, preseq library complexity and multiqc summary. Also contains a wrapper for running `chromVAR` to infer accessability changes linked to transcription factor motif occurrence.
