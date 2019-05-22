@@ -1,5 +1,7 @@
 function FRiP {
   
+  ## Count Fraction of Reads Per Peak as indicator of data quality:
+  
   PEAKS=$1
   CUTSITES=$2
   
