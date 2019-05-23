@@ -1,9 +1,5 @@
-## Template for differential analysis with csaw using called peaks as template for read counting and FDR control
-## Wrapper to run csaw in peakbased mode:
-
-## SUMMITS: BED-like file with summit positions, e.g. from macs2: path to it
-## BAMS: full path to the BAM files BAMS<-list.files("~/IMTB/Fischer2019/ATAC-seq/bam/", full.names = T, pattern = "\\.bam$")
-## blacklist is path to blacklist
+## Template for differential count analysis (ATAC-seq, ChIP-seq)
+## using csaw (with peaks as template to quantify reads over instead of sliding windows, sorry Aaron)
 
 run_csaw_peakBased <- function(NAME,                         ## the name assigned to this analysis
                                SUMMITS,                      ## path to a BED-like file with summits (or intervals)
