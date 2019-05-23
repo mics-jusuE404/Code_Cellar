@@ -85,7 +85,7 @@ Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome){
   ## this is pretty much copied from the chromVAR manual page:
   fragment_counts <- addGCBias(FragmentCounts, genome = Genome)
   filtered_counts <- filterSamples(fragment_counts, shiny = F)
-  filtered_counts <- filterPeaks(fragment_counts)
+  filtered_counts <- filterPeaks(filtered_counts)
   
   ## match motifs to the input regions.
   ## As this method does (AFAIK) not correct for multi. testing, it might be clever to use FIMO
