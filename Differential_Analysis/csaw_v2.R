@@ -17,7 +17,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                CONTRASTS,                    ## contrasts to test
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
-                               WORKINGDIR){                  ## the directory to save MA-plots
+                               WORKINGDIR,                   ## the directory to save MA-plots
+                               saveBinned = F){              ## whether to calculate and save normalized counts based on large bins
   
   ## Check if required packages are installed:
   packageS <- c("csaw", "statmod", "edgeR", "GenomicAlignments", "data.table")
@@ -32,6 +33,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   library(statmod)
   
   if (PAIRED == T) stop("Paired-end mode not yet implemented")
+  
+  if (NORM == "largebins") saveBinned = T
   ##############################################################################################################################
   ## Enter specified working directory (or create if not existing):
   message("")
@@ -114,12 +117,15 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   }
   file.names <- as.character(strReverse(sapply(strReverse(BAMS), function(x) strsplit(x, split = "\\/")[[1]][1])))
   
-  ## store CPMs based on TMM with largebin counts:
-  message("Counting reads per bins for ", length(BAMS), " BAM files using ", CORES, " workers")
-  binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
+  if (saveBinned == T){
+  
+    ## store CPMs based on TMM with largebin counts:
+    message("Counting reads per bins for ", length(BAMS), " BAM files using ", CORES, " workers")
+    binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
  
-  CPMcountsBins  <- data.frame( calculateCPM(object = normFactors(binned, se.out=data), use.norm.factors = T, log = F) )
-  colnames(CPMcountsBins) <- file.names
+    CPMcountsBins  <- data.frame( calculateCPM(object = normFactors(binned, se.out=data), use.norm.factors = T, log = F) )
+    colnames(CPMcountsBins) <- file.names
+  }
   
   message("Calculating normalization factors and storing counts")
   ## store raw counts:
@@ -146,8 +152,10 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   assign( paste(NAME, "_countsCPM_peaks", sep=""),
           CPMcountsPeaks, envir = .GlobalEnv)
   
-  assign( paste(NAME, "_countsCPM_largebins", sep=""),
-          CPMcountsBins, envir = .GlobalEnv)
+  if (saveBinned == T){
+    assign( paste(NAME, "_countsCPM_largebins", sep=""),
+            CPMcountsBins, envir = .GlobalEnv)
+  }
   
   #################################################################################################################
   ## Differential analysis with edgeR:
@@ -284,8 +292,10 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   }
   
   if (plotMAall != "none") {
-    Do_MAplot(CPMs = CPMcountsBins, SUFFIX = "largebins")
+    
+    if (saveBinned == T) Do_MAplot(CPMs = CPMcountsBins, SUFFIX = "largebins")
     Do_MAplot(CPMs = CPMcountsPeaks, SUFFIX = "peakbased")
+    
   }
   
   
