@@ -1,4 +1,4 @@
-## Template for differential analysis with csaw using called peaks as template for read counting and FDR control: Git 311c26e
+## Template for differential analysis with csaw using called peaks as template for read counting and FDR control
 ## Wrapper to run csaw in peakbased mode:
 
 ## SUMMITS: BED-like file with summit positions, e.g. from macs2: path to it
