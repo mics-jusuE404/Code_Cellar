@@ -5,30 +5,27 @@ library(edgeR)
 library(csaw)
 options(scipen=999)
 
-run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contrasts, NAME="", MAall = F, WD = "~/"){
+run_edgeR <- function(TXI,         ## tximport output
+                      COLDATA,     ## coldata specifying the levels for design
+                      DESIGN,      ## design parameter
+                      CONTRASTS,   ## contrasts to test
+                      NAME,        ## name assigned to this analysis
+                      plotMAall,   ## T/F for plotting MAs for all combinations or only aggregated per group
+                      WD){         ## wdir for the plots to be saved
   
   message("")
   
-  if (NAME == "") stop("Please enter a sample name!")
-  
-  if (WD != "~/"){
-    
-    if (dir.exists(WD)){
-      message("Enter working directory ", WD)
-      setwd(WD)
-    }
-    
-    if (!dir.exists(WD)){
-      message("Creating working directory ", WD)
-      dir.create(WD, showWarnings = T)
-      setwd(WD)
-    }
-    
+  if (dir.exists(WD)){
+    message("Enter working directory ", WD)
+    setwd(WD)
   }
-  
-  ## - TXI is the output of tximport()
-  TXI <- txi
-  
+    
+  if (!dir.exists(WD)){
+    message("Creating working directory ", WD)
+    dir.create(WD, showWarnings = T)
+    setwd(WD)
+  }
+     
   ########################################################################################################################
   ## Code to make use of the tximport information, 100% copied from tximport vignette:
   message("Calculating offsets from tximport")
@@ -122,8 +119,8 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
   
   ## get normalized counts
   
-  if (MAall == "N"){
-    if (MAall == F){
+  if (plotMAall == "N"){
+    if (plotMAall == F){
       message("Printing MA plots averaged over replicates")
       
       if ("FALSE" %in% grepl("rep", colnames(se.cpm))) message("Warning: Not all sample names end with _rep* -- skipping MAplot part!")
@@ -160,7 +157,7 @@ run_edgeR <- function(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS =
       }
     }
     
-    if (MAall == T){
+    if (plotMAall == T){
       
       message("Printing MA plots for all sample combinations")
       
