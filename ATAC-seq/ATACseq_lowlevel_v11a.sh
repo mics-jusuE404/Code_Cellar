@@ -66,6 +66,11 @@ cat <<EOF > sizeFactors.R
 ## over the entire genome with 500bp windows, taking the top 100k windows based on rowMeans.
 ## File comes from stdin via the main bash script ATACseq_lowlevel(...).sh
 
+packageS <- c("DESeq2", "data.table")
+  if (length(grep("FALSE", (packageS %in% rownames(installed.packages())))) > 0){
+    stop("Package(s): ", packageS[which( packageS %in% rownames(installed.packages()) == "FALSE")], " are not installed!")
+}
+
 library(DESeq2)
 library(data.table)
  
