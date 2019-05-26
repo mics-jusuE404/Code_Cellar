@@ -179,7 +179,7 @@ function Fq2Bam {
   CUT_FQSE="cutadapt -j 1 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz"
 	
   CUT_FQPE="seqtk mergepe "${BASENAME}"_1.fastq.gz "${BASENAME}"_2.fastq.gz \
-  	        | cutadapt -j 1 -a "${ADAPTER}" -A "${ADAPTER}" --interleaved -m 18 --max-n 0.1 -"
+  	    | cutadapt -j 1 -a "${ADAPTER}" -A "${ADAPTER}" --interleaved -m 18 --max-n 0.1 -"
   	        
   CUT_UBSE="samtools fastq -n -@ 2 "${BASENAME}"_ubam.bam \
             | cutadapt -j 1 -a "${ADAPTER}" -m 18 --max-n 0.1 -"	 
@@ -224,10 +224,10 @@ function Fq2Bam {
 
   ## Run the lowlevel alignment pipeline:
   eval "${COMMAND1}" \
-    | samblaster --ignoreUnmated \
-    | sambamba view -f bam -S -l 5 -t 2 -o /dev/stdout /dev/stdin \
-    | tee >(sambamba flagstat -t 2 /dev/stdin > "${BASENAME}"_raw.flagstat) \
-    | sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o "${BASENAME}"_raw.bam /dev/stdin  
+  | samblaster --ignoreUnmated \
+  | sambamba view -f bam -S -l 5 -t 2 -o /dev/stdout /dev/stdin \
+  | tee >(sambamba flagstat -t 2 /dev/stdin > "${BASENAME}"_raw.flagstat) \
+  | sambamba sort -m 5G --tmpdir=./ -l 5 -t 16 -o "${BASENAME}"_raw.bam /dev/stdin  
   
   ## Check if alignment went ok based on BAM file integrity:
   BamCheck "${BASENAME}"_raw.bam
@@ -249,20 +249,20 @@ function Fq2Bam {
     fi
 		
   samtools idxstats "${BASENAME}"_raw.bam \
-    | cut -f 1 \
-    | grep -vE 'chrM|_random|chrU|chrEBV|\*' \
-      | xargs sambamba view -l 5 -f bam -t 8 --num-filter="${NUMFILTER}"/2308 --filter='mapping_quality > 19' \
-        -o /dev/stdout "${BASENAME}"_raw.bam \
-        | tee "${BASENAME}"_dup.bam \
-        | tee >(samtools index - "${BASENAME}"_dup.bam.bai) \
-        | sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin \
-        | tee >(tee "${BASENAME}"_dedup.bam | samtools index - "${BASENAME}"_dedup.bam.bai) \
-        | bedtools bamtobed -i - \
-        | mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' \
-        | sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 \
-        | tee >(bgzip -@ 6 > "${BASENAME}"_cutsites.bed.gz) \
-        | bedtools genomecov -bg -i - -g tmp_chromSizes.txt \
-        | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${BASENAME}"_cutsites_noScale.bigwig
+  | cut -f 1 \
+  | grep -vE 'chrM|_random|chrU|chrEBV|\*' \
+  | xargs sambamba view -l 5 -f bam -t 8 --num-filter="${NUMFILTER}"/2308 --filter='mapping_quality > 19' \
+    -o /dev/stdout "${BASENAME}"_raw.bam \
+  | tee "${BASENAME}"_dup.bam \
+  | tee >(samtools index - "${BASENAME}"_dup.bam.bai) \
+  | sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin \
+  | tee >(tee "${BASENAME}"_dedup.bam | samtools index - "${BASENAME}"_dedup.bam.bai) \
+  | bedtools bamtobed -i - \
+  | mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' \
+  | sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 \
+  | tee >(bgzip -@ 6 > "${BASENAME}"_cutsites.bed.gz) \
+  | bedtools genomecov -bg -i - -g tmp_chromSizes.txt \
+  | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${BASENAME}"_cutsites_noScale.bigwig
   
   BamCheck "${BASENAME}"_dup.bam
   BamCheck "${BASENAME}"_dedup.bam
@@ -317,9 +317,9 @@ function Bigwig {
   
   ## Bigwig with 80bp fragments to smooth the signal:
   bigWigToBedGraph "${FILE}" /dev/stdout \
-    | bedtools slop -b 40 -g tmp_chromSizes.txt -i - \
-    | bedtools genomecov -g tmp_chromSizes.txt -i - -bg -scale "${FACTOR}" \
-    | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${FILE%_noScale.bigwig}"_geomean.bigwig
+  | bedtools slop -b 40 -g tmp_chromSizes.txt -i - \
+  | bedtools genomecov -g tmp_chromSizes.txt -i - -bg -scale "${FACTOR}" \
+  | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${FILE%_noScale.bigwig}"_geomean.bigwig
   
   (>&2 paste -d " " <(echo '[INFO]' 'Browser Tracks for' "${1}" 'ended on') <(date))
   
