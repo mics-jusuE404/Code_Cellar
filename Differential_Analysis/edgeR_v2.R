@@ -5,7 +5,7 @@ run_edgeR <- function(TXI,         ## tximport output
                       DESIGN,      ## design parameter
                       CONTRASTS,   ## contrasts to test
                       NAME,        ## name assigned to this analysis
-                      plotMAall,   ## T/F for plotting MAs for all combinations or only aggregated per group
+                      plotMAall=F, ## T/F for plotting MAs for all combinations or only aggregated per group
                       WORKINGDIR){ ## wdir for the plots to be saved
   
   ########################################################################################################################
@@ -53,7 +53,8 @@ run_edgeR <- function(TXI,         ## tximport output
   y <- y[keep, ]
   
   ## Custom part: Export normalized counts following https://support.bioconductor.org/p/121087/,
-  ## making ose of the offsets from tximport to correct for transcript length and depth/composition:
+  ## making ose of the offsets from tximport to correct for transcript length and depth/composition.
+  ## Thanks to Aaron Lun and Mike Love for the help:
   message("Saving offset-corrected CPMs")
   se <- SummarizedExperiment(assays = y$counts)
   names(assays(se))[1] <- "counts"
