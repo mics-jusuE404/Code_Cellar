@@ -1,5 +1,8 @@
-## Template for differential count analysis (ATAC-seq, ChIP-seq)
-## using csaw (with peaks as template to quantify reads over instead of sliding windows, sorry Aaron)
+## Template for differential count analysis of DNA-seq data such as ATAC-seq or ChIP-seq.
+## In its current state, it uses csaw (with user-provided peak summit positions, extended to user-defined size)
+## to count reads and perform edgeR-based differential analysis.
+## It will output all relevant intermediate results and CPMs plus MA-plots either comparing
+## every possible combination of samples after normalization or averaged based on defined groups.
 
 run_csaw_peakBased <- function(NAME,                         ## the name assigned to this analysis
                                SUMMITS,                      ## path to a BED-like file with summits (or intervals)
