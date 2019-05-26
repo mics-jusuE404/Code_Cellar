@@ -172,13 +172,13 @@ function Fq2Bam {
   TYPE="${2}"
   IDX="${3}"
 	
-	#############################################################################################################
-	## 4 versions upstream of bowtie2 depending on paired/single and fq or ubam:
-	ADAPTER="CTGTCTCTTATACACATCT"
+  #############################################################################################################
+  ## 4 versions upstream of bowtie2 depending on paired/single and fq or ubam:
+  ADAPTER="CTGTCTCTTATACACATCT"
 	
-	CUT_FQSE="cutadapt -j 1 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz"
+  CUT_FQSE="cutadapt -j 1 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz"
 	
-	CUT_FQPE="seqtk mergepe "${BASENAME}"_1.fastq.gz "${BASENAME}"_2.fastq.gz \
+  CUT_FQPE="seqtk mergepe "${BASENAME}"_1.fastq.gz "${BASENAME}"_2.fastq.gz \
   	        | cutadapt -j 1 -a "${ADAPTER}" -A "${ADAPTER}" --interleaved -m 18 --max-n 0.1 -"
   	        
   CUT_UBSE="samtools fastq -n -@ 2 "${BASENAME}"_ubam.bam \
@@ -188,14 +188,15 @@ function Fq2Bam {
             | cutadapt -j 1 -a "${ADAPTER}" -A "${ADAPTER}" --interleaved -m 18 --max-n 0.1 -"
   
   #############################################################################################################          
+  
   ## two bowtie2 modes:
   BOWTIE2PE="bowtie2 --very-sensitive --threads 16 -X 2000 --rg-id "${BASENAME}" -x $IDX --interleaved - \
              | samtools fixmate -m -@ 2 -O SAM - -"
 
   BOWTIE2SE="bowtie2 --very-sensitive --threads 16 -x "${IDX}" -U -"             
 	
-	#############################################################################################################
-	## Check mode and set concat command accordingly:
+  #############################################################################################################
+  ## Check mode and set concat command accordingly:
   
   ## 1) uBAM-SE:
   if [[ $(echo ${TYPE} | grep 'UBAMSE') ]]; then
