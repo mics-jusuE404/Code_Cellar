@@ -8,10 +8,10 @@ Currently, it accepts a list of peak summit positions that are then extended to 
 Differential RNA-seq analysis using the `edgeR` framework downstream of `salmon` and `tximport`. Expects `txi` from `tximport` plus design matrix and contrasts as inputs. Outputs the standard `topTags` from `edgeR` plus the offset-corrected CPMs (offsets that account for depth, composition bias and txlength from `tximport`).
 
 ## plotMA_custom:
-A wrapper to create MA-plots for pairwise comparison of count data.
+A wrapper to create MA-plots for pairwise comparison of count data based on average counts and log2FC.
 
 ## tximport:
 Short template script to summarize `salmon` quantifications to the gene level.
 
 ## volcano:
-Simple wrapper to create colored volcano plots providing a table with p-values and FCs.
+Simple wrapper to create colored volcano plots based on p-values and logFCs.
