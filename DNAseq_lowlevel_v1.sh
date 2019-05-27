@@ -51,15 +51,15 @@ if [[ ${GENOME} == "mm10" ]]; then
 
 ## Check if MODE and GENOME are correctly set is correct:
 if [[ ! $(echo $MODE | grep -E 'UBAMSE|UBAMPE|FQSE|FQPE') ]]; then 
-  '[ERROR] MODE parameter is neither of (UBAMSE|UBAMPE|FQSE|FQPE) -- exiting' && exit 1
+  echo '[ERROR] MODE parameter is neither of (UBAMSE|UBAMPE|FQSE|FQPE) -- exiting' && exit 1
   fi
   
 if [[ ! $(echo $GENOME | grep -E 'hg38|mm10') ]]; then 
-  '[ERROR] GENOME is neither of the supported hg38 and mm10 -- exiting' && exit 1
+  echo '[ERROR] GENOME is neither of the supported hg38 and mm10 -- exiting' && exit 1
   fi
 
 if [[ ! $(echo $MODE | grep -E 'ATACseq|ChIPseq') ]]; then 
-  '[ERROR] ASSAY is neither of the supported ATACseq or ChIPseq -- exiting' && exit 1
+  echo '[ERROR] ASSAY is neither of the supported ATACseq or ChIPseq -- exiting' && exit 1
   fi
 
 ## Check if required tools are in PATH:
