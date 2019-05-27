@@ -15,4 +15,4 @@ tmp.files <- list.files(path = list.dirs(path = "~/IMTB/Fischer2019/RNA-seq/salm
 names(tmp.files) <- sapply(strsplit(tmp.files, split = "salmons|_salmon"), function(x) x[2])
 
 ## import tx:
-txi <- tximport(files = tmp.files, type = "salmon", txIn = T, txOut = F, tx2gene = TX2GENE)
+txi <- tximport(files = tmp.files, type = "salmon", txIn = T, txOut = F, tx2gene = TX2Gene)
