@@ -8,7 +8,7 @@ Currently, it accepts a list of peak summit positions that are then extended to 
 Differential RNA-seq analysis using the `edgeR` framework downstream of `salmon` and `tximport`. Expects `txi` from `tximport` plus design matrix and contrasts as inputs. Outputs the standard `topTags` from `edgeR` plus the offset-corrected CPMs (offsets that account for depth, composition bias and txlength from `tximport`).
 
 ## plotMA_custom:
-A wrapper to create MA-plots for pairwise comparison of count data based on average counts and log2FC.
+A wrapper to create MA-plots for pairwise comparison of count data based on average counts and log2FC. Automatically sets ylimits based on quantiles to capture most of the data. Outliers are plotted as little triangles at the borders of the yaxis, pretty similar to what `DESeq2::plotMA` does.
 
 ## tximport:
 Short template script to summarize `salmon` quantifications to the gene level.
