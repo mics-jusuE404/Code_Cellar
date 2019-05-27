@@ -2,7 +2,12 @@
 ## Automatically chooses y-axis limits based on rounded quantiles unless uses overwrites this with YLIM.
 ## Can use smoothScatter or heatScatter for plotting. The latter requires the LSD package.
 
-plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM="", REPLACE.ZERO = 1){
+plotMA_custom <- function(COUNTS,           ## 2-column data.frame or matrix with the counts to plot
+                          LOGGED = F,       ## F=counts are not logged, T=counts are already log2
+                          MAIN = "",        ## plot title
+                          MODE = "smooth",  ## smooth for smoothScatter plot or heatscatter for LSD::heatscatter
+                          YLIM="",          ## user-defined ylims, if empty will be chosen based on quantiles
+                          REPLACE.ZERO = 1) ## uses the specified number (default 1) to replace zeros to avoid log2(0) {
   
   par(bty="n")
   ## Check if LSD is installed:
@@ -62,5 +67,5 @@ plotMA_custom <- function(COUNTS, LOGGED = F, MAIN = "", MODE = "smooth", YLIM="
 
 ## Example usage:
 par(mfrow=c(2,1))
-plotMA_custom(COUNTS = cpm1[,1:2], LOGGED = F, MAIN = "default y-axis based on quantiles", MODE = "smooth")
-plotMA_custom(COUNTS = cpm1[,1:2], LOGGED = F, MAIN = "user-defined y-axis (-1,1)", MODE = "smooth", YLIM = c(-1,1))
+plotMA_custom(COUNTS = cpm1[,c(1:2)], LOGGED = F, MAIN = "default y-axis limits based on quantiles", MODE = "smooth")
+plotMA_custom(COUNTS = cpm1[,c(1:2)], LOGGED = F, MAIN = "user-defined y-axis (-1,1)", MODE = "smooth", YLIM = c(-1,1))
