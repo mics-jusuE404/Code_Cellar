@@ -208,5 +208,5 @@ run_edgeR <- function(TXI,         ## tximport output
 #                       WUCaWTu = FACTORIZEDD-FACTORIZEDC ,
 #                        levels = design)
 
-#run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "test", MAall = "N", WORKINGDIR = "~/MUH")
+#run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "test", plotMAall = "N", WORKINGDIR = "~/MUH")
 
