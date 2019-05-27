@@ -1,6 +1,7 @@
 ## Template for tximport from salmon:
 
 library(tximport)
+library(data.table)
 
 ## tx2gene list:
 TX2Gene <- fread("/Volumes/Rumpelkammer/Genomes/mm10/Gencode_M20/gencode.vM20.Tx2Gene.txt", header = T, data.table = F)
