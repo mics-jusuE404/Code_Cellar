@@ -1,7 +1,10 @@
 # Content:
 
+## DNAseq_lowlevel_vx.sh
+This script performs all relevant preprocessing of DNA-seq data (currently with settings for ChIP-seq and ATAC-seq) starting with `fastqc` control, adapter trimming, alignment, filtering, peak calling, FRiP calculation, library complexity assessment, browser track creation, summary statistics/multiqc. THere are a few options that can be set in the header such as number of parallel jobs and presets for ATACseq and ChIPseq and the input format and layout (uBam or Fastq, paired- or single-end runs, but not mixed). Expects input files to be in same directory as the script itself.
+
 ## ATAC-seq
-Folder contains the low-level script to process ATAC-seq data including quality control, adapter trimming, alignment, peak calling, FRiP calculation, bigwig creation, preseq library complexity and multiqc summary. Also contains a wrapper for running `chromVAR` to infer accessability changes linked to transcription factor motif occurrence.
+Folder contains some scripts to analyze ATAC-seq data such as a wrapper to run `chromVAR`.
 
 ## ChIP-seq
 Same as ATAC-seq but for, guess what, ChIP-seq data.
