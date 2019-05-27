@@ -9,6 +9,8 @@ Differential RNA-seq analysis using the `edgeR` framework downstream of `salmon`
 
 ## plotMA_custom:
 A wrapper to create MA-plots for pairwise comparison of count data based on average counts and log2FC. Automatically sets ylimits based on quantiles to capture most of the data. Outliers are plotted as little triangles at the borders of the yaxis, pretty similar to what `DESeq2::plotMA` does.
+Example:
+![MA-plot](https://i.ibb.co/Bjr7YFm/MAplot.png)
 
 ## tximport:
 Short template script to summarize `salmon` quantifications to the gene level.
