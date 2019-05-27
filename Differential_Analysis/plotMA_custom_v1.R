@@ -1,6 +1,9 @@
-## Script to make MAplots accepting a 2-column count matrix as input.
-## Automatically chooses y-axis limits based on rounded quantiles unless uses overwrites this with YLIM.
+## Simple wrapper script to make MA-plots from counts in a matrix or dataframe.
+## Usage example at the bottom of the script.
+## Automatically chooses y-axis limits based on rounded quantiles unless user overwrites this with YLIM option.
 ## Can use smoothScatter or heatScatter for plotting. The latter requires the LSD package.
+## smoothScatter is faster and produces smaller (in terms of disk space) images,
+## heatscatter is somewhat more fancy but produces quite large images that do not really fit into Powerpoint.
 
 plotMA_custom <- function(COUNTS,           ## 2-column data.frame or matrix with the counts to plot
                           LOGGED = F,       ## F=counts are not logged, T=counts are already log2
