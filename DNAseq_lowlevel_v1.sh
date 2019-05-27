@@ -506,7 +506,7 @@ if [[ ${ASSAY} == "ATACseq" ]]; then
 ## ChIP-seq tracks just simple CPM:  
 if [[ ${ASSAY} == "ChIPseq" ]]; then
 
-  ls *_dedup.bam | parallel -j $JOBS "Bigwig_CPM {} ${ASSAY}"
+  ls *_dedup.bam | parallel -j $JOBS "Bigwig_CPM {} ${MODE}"
   
   fi
   
