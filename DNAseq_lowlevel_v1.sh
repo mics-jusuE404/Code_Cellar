@@ -491,7 +491,7 @@ if [[ ${ASSAY} == "ATACseq" ]]; then
   
     ls *_cutsites_noScale.bigwig \
       | awk -F "_cutsites_noScale.bigwig" '{print $1}' \
-      | parallel -j 16 "Bigwig {}_cutsites_noScale.bigwig 2>> {}.log"
+      | parallel -j 16 "Bigwig_SF {}_cutsites_noScale.bigwig 2>> {}.log"
     else
       (>&2 echo '[INFO] Only one sample present, skipping normalization of that one bigwig file')
     fi
