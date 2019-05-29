@@ -16,7 +16,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                CONTRASTS,                    ## contrasts to test
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
-                               WORKINGDIR,                   ## the directory to save MA-plots
+                               PLOTDIR,                   ## the directory to save MA-plots
                                saveBinned = F){              ## whether to calculate and save normalized counts based on large bins
   
   ## Check if required packages are installed:
@@ -39,17 +39,11 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   message("")
   message("[STARTED]: ", NAME)
   
-  if (dir.exists(WORKINGDIR)){
-    message("Enter working directory ", WORKINGDIR)
-    setwd(WORKINGDIR)
+  if (!dir.exists(PLOTDIR)){
+    message("Creating plotting directory ", PLOTDIR)
+    dir.create(PLOTDIR, showWarnings = T)
   }
   
-  if (!dir.exists(WORKINGDIR)){
-    message("Creating working directory ", WORKINGDIR)
-    dir.create(WORKINGDIR, showWarnings = T)
-    setwd(WORKINGDIR)
-  }
-
   #################################################################################################################
   ## Extend peak summits to granges:
   tmp.summits <- fread(SUMMITS, data.table = F, header = F)
@@ -117,11 +111,11 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   file.names <- as.character(strReverse(sapply(strReverse(BAMS), function(x) strsplit(x, split = "\\/")[[1]][1])))
   
   if (saveBinned == T){
-  
+    
     ## store CPMs based on TMM with largebin counts:
     message("Counting reads per bins for ", length(BAMS), " BAM files using ", CORES, " workers")
     binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
- 
+    
     CPMcountsBins  <- data.frame( calculateCPM(object = normFactors(binned, se.out=data), use.norm.factors = T, log = F) )
     colnames(CPMcountsBins) <- file.names
   }
@@ -243,7 +237,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
         ## Make all pairwise comparisons:
         tmp.combn <- combn(x = names.unique, m = 2)
         
-        pdf(file = paste(NAME,"_MAplots_",SUFFIX,".pdf", sep="") , onefile=T, paper='A4') 
+        pdf(file = paste(PLOTDIR, paste(NAME,"_MAplots_",SUFFIX,".pdf", sep=""), sep="/") , onefile=T, paper='A4') 
         par(mfrow=c(1,1), bty="n")
         for (i in 1:ncol(tmp.combn)){
           
@@ -272,7 +266,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
       
       tmp.combn <- combn(x = colnames(CPMs), m = 2)
       
-      pdf(file = paste(NAME,"_MAplots_",SUFFIX,".pdf", sep="") , onefile=T, paper='A4') 
+      pdf(file = paste(PLOTDIR, paste(NAME,"_MAplots_",SUFFIX,".pdf", sep=""), sep="/") , onefile=T, paper='A4') 
       par(mfrow=c(1,1), bty="n")
       for (i in 1:ncol(tmp.combn)){
         
@@ -304,23 +298,27 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
 }
 
-## Example:
-tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
+TEST=F
 
-tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
-
-tmp.coldata1 <- data.frame(NAME      = tmp.name1,
-                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
-                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
-                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
-
-tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
-
-tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
-                                Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-                                levels = tmp.design1)
-
-run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
-                   BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
-                   BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
-                   CONTRASTS = tmp.contrasts1, CORES = 16, plotMAall = F, WORKINGDIR = "~/testdir")
+if (TEST==T){
+  ## Example:
+  tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
+  
+  tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
+  
+  tmp.coldata1 <- data.frame(NAME      = tmp.name1,
+                             GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
+                             CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
+                             FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
+  
+  tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
+  
+  tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
+                                  Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
+                                  levels = tmp.design1)
+  
+  run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
+                     BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
+                     BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
+                     CONTRASTS = tmp.contrasts1, CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
+}
