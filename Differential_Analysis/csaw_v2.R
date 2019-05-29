@@ -106,6 +106,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   if (FILTER_aveLogCPM != ""){
     
+    message("Filtering regions for aveLogCPM of ", FILTER_aveLogCPM)
     keep <- aveLogCPM(asDGEList(data)) >= FILTER_aveLogCPM
     data <- data[keep,]
     
