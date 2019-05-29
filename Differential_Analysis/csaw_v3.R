@@ -4,6 +4,8 @@
 ## It will output all relevant intermediate results and CPMs plus MA-plots either comparing
 ## every possible combination of samples after normalization or averaged based on defined groups.
 
+## Function counts/normalizes reads and fits the GLM. In a separate function one then tests the contrasts:
+##
 run_csaw_peakBased <- function(NAME,                         ## the name assigned to this analysis
                                SUMMITS,                      ## path to a BED-like file with summits (or intervals)
                                BLACKLIST,                    ## path to a blacklist excluded for analysis
@@ -14,7 +16,6 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                NORM = "peaks",               ## "peaks" or "largebins" for TMM-normalization
                                FILTER_aveLogCPM = c(-1) ,    ## apply aveLogCPM filter default -1, set to "" to deactivate
                                DESIGN,                       ## design fulfillign edgeR requirements
-                               CONTRASTS,                    ## contrasts to test
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
                                PLOTDIR,                   ## the directory to save MA-plots
@@ -164,7 +165,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   #################################################################################################################
   ## Differential analysis with edgeR:
-  message("Differential analysis with edgeR")
+  message("-- edgeR")
   
   ## set up DGElist:
   y <- asDGEList(data)
@@ -179,27 +180,6 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   fit <- glmQLFit(y, DESIGN, robust=TRUE)
   assign( paste(NAME, "_glmQLFit", sep=""),
           fit, envir = .GlobalEnv)
-  
-  #################################################################################################################
-  ## Test all specified contrasts:
-  message("Testing all contrasts (total of ", dim(CONTRASTS)[2],")")
-  
-  for (i in seq(1,dim(CONTRASTS)[2])){
-    
-    ## current contrast:
-    current.results <- glmQLFTest(fit, contrast = CONTRASTS[,i])
-    
-    ## Save the raw result:
-    assign( paste(NAME, "_glmQLFTest_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
-            current.results, envir = .GlobalEnv)
-    
-    ## Save the FDR-adjusted TT:
-    current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
-    current.out <- data.frame( data.frame(rowRanges(data))[,1:3], current.out$table)
-    assign( paste(NAME, "_topTags_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
-            current.out, envir = .GlobalEnv)
-    rm(current.results)
-  }
   
   #################################################################################################################
   ## Produce MA plots, using the average per replicate group:
@@ -310,27 +290,48 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
 }
 
-TEST=F
+###################################################################################################################
 
-if (TEST==T){
-  ## Example:
-  tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
+## Function to test the contrasts:
+edgeR_TestContrasts <- function(CONTRASTS,     ## the output of makeContrasts()
+                                FIT,           ## the output of glmQLFit() from the above function
+                                RANGES,        ## the *_regionCounts object from above to get the genomic ranges
+                                NAME){         ## name for assign()
   
-  tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
+  message("Testing all contrasts (total of ", dim(CONTRASTS)[2],")")
   
-  tmp.coldata1 <- data.frame(NAME      = tmp.name1,
-                             GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
-                             CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
-                             FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
+  for (i in seq(1,dim(CONTRASTS)[2])){
+    
+    ## current contrast:
+    current.results <- glmQLFTest(FIT, contrast = CONTRASTS[,i])
+    
+    ## Save the FDR-adjusted TT:
+    current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
+    current.out <- data.frame( data.frame(rowRanges(RANGES))[,1:3], current.out$table)
+    assign( paste(NAME, "_topTags_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
+            current.out, envir = .GlobalEnv)
+    rm(current.results)
   
-  tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
-  
-  tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
-                                  Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-                                  levels = tmp.design1)
-  
-  run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
-                     BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
-                     BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
-                     CONTRASTS = tmp.contrasts1, CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
 }
+                         
+## Example:
+## tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
+  
+## tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
+  
+## tmp.coldata1 <- data.frame(NAME      = tmp.name1,
+##                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
+##                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
+##                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
+  
+## tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
+  
+## tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
+##                                 Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
+##                                 levels = tmp.design1)
+  
+## run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
+##                    BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
+##                    BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
+##                    CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
+
