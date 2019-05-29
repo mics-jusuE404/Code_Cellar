@@ -309,7 +309,7 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
       current.results <- glmQLFTest(FIT, contrast = CONTRASTS[,i])
     }
     if (GLMTREAT.FC != "" && is.numeric(GLMTREAT.FC)){
-      message("Null hypothesis is FC=",GLMTREAT.FC)
+      message("Null hypothesis is FC = ",GLMTREAT.FC, " for ", attr(CONTRASTS, "dimnames")$Contrasts[i])
       current.results <- glmTreat(glmfit = FIT, contrast = CONTRASTS[,i], lfc = log2(GLMTREAT.FC))
     }
     
@@ -322,26 +322,26 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
     
   }
 }
-  
-  ## Example:
-  ## tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
-  
-  ## tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
-  
-  ## tmp.coldata1 <- data.frame(NAME      = tmp.name1,
-  ##                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
-  ##                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
-  ##                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
-  
-  ## tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
-  
-  ## tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
-  ##                                 Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-  ##                                 levels = tmp.design1)
-  
-  ## run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
-  ##                    BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
-  ##                    BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
-  ##                    CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
-  
-  
+
+## Example:
+## tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
+
+## tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
+
+## tmp.coldata1 <- data.frame(NAME      = tmp.name1,
+##                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
+##                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
+##                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
+
+## tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
+
+## tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
+##                                 Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
+##                                 levels = tmp.design1)
+
+## run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
+##                    BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
+##                    BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
+##                    CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
+
+
