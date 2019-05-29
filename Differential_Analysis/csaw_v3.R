@@ -305,9 +305,11 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
     
     ## current contrast:
     if (GLMTREAT.FC == ""){
+      message("Null hypothesis is FC=0")
       current.results <- glmQLFTest(FIT, contrast = CONTRASTS[,i])
     }
     if (GLMTREAT.FC != "" && is.numeric(GLMTREAT.FC)){
+      message("Null hypothesis is FC=",GLMTREAT.FC)
       current.results <- glmTreat(glmfit = FIT, contrast = CONTRASTS[,i], lfc = log2(GLMTREAT.FC))
     }
     
