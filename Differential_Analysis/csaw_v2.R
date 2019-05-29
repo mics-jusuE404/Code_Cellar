@@ -47,7 +47,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   if (!dir.exists(WORKINGDIR)){
     message("Creating working directory ", WORKINGDIR)
     dir.create(WORKINGDIR, showWarnings = T)
-    setWORKINGDIR(WORKINGDIR)
+    setwd(WORKINGDIR)
   }
 
   #################################################################################################################
