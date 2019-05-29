@@ -12,8 +12,15 @@ A wrapper to create MA-plots for pairwise comparison of count data based on aver
 Example:
 ![MA-plot](https://i.ibb.co/Bjr7YFm/MAplot.png)
 
+## smoothScatter_TopTags.R
+Pretty much the same as `plotMA_custom` but takes a topTags object and colors significant regions. 
+Example:
+![MAcolor](https://i.ibb.co/ccDytB7/Screen-Shot-2019-05-29-at-19-31-33.png)
+
 ## tximport:
 Short template script to summarize `salmon` quantifications to the gene level.
 
 ## volcano:
 Simple wrapper to create colored volcano plots based on p-values and logFCs.
+
+
