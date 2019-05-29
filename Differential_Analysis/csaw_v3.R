@@ -290,20 +290,26 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
 }
 
-###################################################################################################################
+######################################################################################################################
 
 ## Function to test the contrasts:
-edgeR_TestContrasts <- function(CONTRASTS,     ## the output of makeContrasts()
-                                FIT,           ## the output of glmQLFit() from the above function
-                                RANGES,        ## the *_regionCounts object from above to get the genomic ranges
-                                NAME){         ## name for assign()
+edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts()
+                                FIT,             ## the output of glmQLFit() from the above function
+                                GLMTREAT.FC="",  ## if numeric input test against that FC (FC not logFC) using glmTreat
+                                RANGES,          ## the *_regionCounts object from above to get the genomic ranges
+                                NAME){           ## name for assign()
   
   message("Testing all contrasts (total of ", dim(CONTRASTS)[2],")")
   
   for (i in seq(1,dim(CONTRASTS)[2])){
     
     ## current contrast:
-    current.results <- glmQLFTest(FIT, contrast = CONTRASTS[,i])
+    if (GLMTREAT.FC == ""){
+      current.results <- glmQLFTest(FIT, contrast = CONTRASTS[,i])
+    }
+    if (GLMTREAT.FC != "" && is.numeric(GLMTREAT.FC)){
+      current.results <- glmTreat(glmfit = FIT, contrast = CONTRASTS[,i], lfc = log2(GLMTREAT.FC))
+    }
     
     ## Save the FDR-adjusted TT:
     current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
