@@ -12,6 +12,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                FRAGLEN = "",                 ## length to extend reads to fragments (use 1 for ATAC-seq)
                                PAIRED = F,                   ## if using paired-end mode (so far not implemented)
                                NORM = "peaks",               ## "peaks" or "largebins" for TMM-normalization
+                               FILTER_aveLogCPM = c(-1) ,    ## apply aveLogCPM filter default -1, set to "" to deactivate
                                DESIGN,                       ## design fulfillign edgeR requirements
                                CONTRASTS,                    ## contrasts to test
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
@@ -32,6 +33,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   library(statmod)
   
   if (PAIRED == T) stop("Paired-end mode not yet implemented")
+  
+  if (FILTER_aveLogCPM != "" && is.numeric(FILTER_aveLogCPM) == F) stop("FILTER_aveLogCPM is not numeric")
   
   if (NORM == "largebins") saveBinned = T
   ##############################################################################################################################
@@ -99,6 +102,14 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                        param = PARAM,
                        regions = peaks_resized.gr,
                        BPPARAM = MulticoreParam(workers = CORES))
+  
+  
+  if (FILTER_aveLogCPM != ""){
+    
+    keep <- aveLogCPM(asDGEList(data)) >= FILTER_aveLogCPM
+    data <- data[keep,]
+    
+  }
   
   assign( paste(NAME, "_regionCounts", sep=""),
           data, envir = .GlobalEnv)
