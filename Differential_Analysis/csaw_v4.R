@@ -1,11 +1,22 @@
-## Template for differential count analysis of DNA-seq data such as ATAC-seq or ChIP-seq.
-## In its current state, it uses csaw (with user-provided peak summit positions, extended to user-defined size)
-## to count reads and perform edgeR-based differential analysis.
-## It will output all relevant intermediate results and CPMs plus MA-plots either comparing
-## every possible combination of samples after normalization or averaged based on defined groups.
+## Template for differential count analysis (ChIP-seq, ATAC-seq) with csaw/edgeR.
+## Three functions are used:
+## 1) run_csaw_peakBased to count reads over peaks, normalization and producing MA-plots,
+## 2) edgeR_FitGLM to estimate dispersion and fit the glm based on the experimental design,
+## 3) edgeR_TestContrasts to test the specified contrasts, optionally against a certain FC with glmTreat()
 
+################################################################################################################################################
+################################################################################################################################################
+
+library(csaw)
+library(edgeR)
+library(GenomicAlignments)
+library(data.table)
+library(statmod)
+
+################################################################################################################################################
+################################################################################################################################################
 ## Function counts/normalizes reads and fits the GLM. In a separate function one then tests the contrasts:
-##
+
 run_csaw_peakBased <- function(NAME,                         ## the name assigned to this analysis
                                SUMMITS,                      ## path to a BED-like file with summits (or intervals)
                                BLACKLIST,                    ## path to a blacklist excluded for analysis
@@ -15,7 +26,6 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                PAIRED = F,                   ## if using paired-end mode (so far not implemented)
                                NORM = "peaks",               ## "peaks" or "largebins" for TMM-normalization
                                FILTER_aveLogCPM = c(-1) ,    ## apply aveLogCPM filter default -1, set to "" to deactivate
-                               DESIGN,                       ## design fulfillign edgeR requirements
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
                                PLOTDIR,                   ## the directory to save MA-plots
@@ -26,12 +36,6 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   if (length(grep("FALSE", (packageS %in% rownames(installed.packages())))) > 0){
     stop("Package(s): ", packageS[which( packageS %in% rownames(installed.packages()) == "FALSE")], " are not installed!")
   }
-  
-  library(csaw)
-  library(edgeR)
-  library(GenomicAlignments)
-  library(data.table)
-  library(statmod)
   
   if (PAIRED == T) stop("Paired-end mode not yet implemented")
   
@@ -164,24 +168,6 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   }
   
   #################################################################################################################
-  ## Differential analysis with edgeR:
-  message("-- edgeR")
-  
-  ## set up DGElist:
-  y <- asDGEList(data)
-  
-  ## Dispersion estimates:
-  message("Estimating dispersion")
-  y <- estimateDisp(y, DESIGN)
-  assign( paste(NAME, "_estimateDisp", sep=""),
-          y, envir = .GlobalEnv)
-  
-  message("Fitting GLM")
-  fit <- glmQLFit(y, DESIGN, robust=TRUE)
-  assign( paste(NAME, "_glmQLFit", sep=""),
-          fit, envir = .GlobalEnv)
-  
-  #################################################################################################################
   ## Produce MA plots, using the average per replicate group:
   plotMA_custom <- function(COUNTS, MAIN = "", REPLACE.ZERO = 1){
     
@@ -290,7 +276,31 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
 }
 
-######################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+## Function to estimate dispersion and fitting GLM:
+edgeR_FitGLM <- function(DATA,      ## the *_regionCounts object from the above function
+                         DESIGN,    ## the experimental design
+                         NAME){     ## name as above
+  
+  ## set up DGElist:
+  y <- asDGEList(DATA)
+  
+  ## Dispersion estimates:
+  message("Estimating dispersion")
+  y <- estimateDisp(y, DESIGN)
+  assign( paste(NAME, "_estimateDisp", sep=""),
+          y, envir = .GlobalEnv)
+  
+  message("Fitting GLM")
+  fit <- glmQLFit(y, DESIGN, robust=TRUE)
+  assign( paste(NAME, "_glmQLFit", sep=""),
+          fit, envir = .GlobalEnv)
+  
+}
+
+################################################################################################################################################
+################################################################################################################################################
 
 ## Function to test the contrasts:
 edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts()
@@ -323,25 +333,37 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
   }
 }
 
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+################################################################################################################################################
+
 ## Example:
-## tmp.bam1  <- list.files("~/IMTB/Fischer2019/ATAC-seq/bam", full.names = T, pattern = "\\.bam$")
+tmp.bam1  <- list.files("~/IMTB/Our_Data/Fischer2019/ATAC-seq/bam/", full.names = T, pattern = "\\.bam$")
 
-## tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
+tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
 
-## tmp.coldata1 <- data.frame(NAME      = tmp.name1,
-##                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
-##                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
-##                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
+tmp.coldata1 <- data.frame(NAME      = tmp.name1,
+                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
+                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
+                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
 
-## tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
+tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
 
-## tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
-##                                 Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-##                                 levels = tmp.design1)
+tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
+                                Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
+                                levels = tmp.design1)
 
-## run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
-##                    BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
-##                    BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks", DESIGN = tmp.design1,
-##                    CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
+## Count reads and normalize:
+run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Our_Data/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
+                   BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
+                   BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks",
+                   CORES = 16, plotMAall = F, PLOTDIR = "~/testdir", saveBinned = F)
 
+## Estimate disp and fit GLM:
+edgeR_FitGLM(DATA = test_regionCounts, DESIGN = tmp.design1, NAME = "test")
 
+## Test contrasts against an abs(FC) of 2:
+edgeR_TestContrasts(CONTRASTS = tmp.contrasts1, FIT = test_glmQLFit, GLMTREAT.FC = 2, RANGES = test_regionCounts, NAME = "test")
