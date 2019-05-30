@@ -80,7 +80,7 @@ peaks_counts          <- getCounts(alignment_files = c(bam.list),
 ##  is smaller or larger than zero upon the second condition.
 ##  If smaller, than the variability score gets a *(-1)
 
-Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome){
+Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome, motifs = motifs_JASPAR2018){
   
   ## this is pretty much copied from the chromVAR manual page:
   fragment_counts <- addGCBias(FragmentCounts, genome = Genome)
