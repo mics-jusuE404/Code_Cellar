@@ -138,11 +138,11 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   ## store raw counts:
   RAWcounts <- data.frame(assay(data))
-  colnames(RAWcounts) <- file.names
+  colnames(RAWcounts) <- gsub("_dedup.bam", "", file.names)
   
   ## store CPMs based on TMM with peak counts:
   CPMcounts <- data.frame( calculateCPM(object = normFactors(data, se.out=data), use.norm.factors = T, log = F) )
-  colnames(CPMcounts) <- file.names
+  colnames(CPMcounts) <- gsub("_dedup.bam", "", file.names)
   
   ## Save raw and CPM counts as GRanges:
   raw.gr <- makeGRangesFromDataFrame(df = cbind( rowRanges(data), RAWcounts),
