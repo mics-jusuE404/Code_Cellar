@@ -28,8 +28,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                FILTER_aveLogCPM = c(-1) ,    ## apply aveLogCPM filter default -1, set to "" to deactivate
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
-                               PLOTDIR,                   ## the directory to save MA-plots
-                               saveBinned = F){              ## whether to calculate and save normalized counts based on large bins
+                               PLOTDIR                       ## the directory to save MA-plots
+                               ){              ## whether to calculate and save normalized counts based on large bins
   
   ## Check if required packages are installed:
   packageS <- c("csaw", "statmod", "edgeR", "GenomicAlignments", "data.table")
@@ -41,7 +41,6 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   if (FILTER_aveLogCPM != "" && is.numeric(FILTER_aveLogCPM) == F) stop("FILTER_aveLogCPM is not numeric")
   
-  if (NORM == "largebins") saveBinned = T
   ##############################################################################################################################
   ## Enter specified working directory (or create if not existing):
   message("")
@@ -116,56 +115,47 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
     data <- data[keep,]
     
   }
-  
-  assign( paste(NAME, "_regionCounts", sep=""),
-          data, envir = .GlobalEnv)
-  
+
   #################################################################################################################
   ## Function returns the file name (essentially everything in full path after the last "/"):
   strReverse <- function(x){
     sapply(lapply(strsplit(x, NULL), rev), paste, collapse="")
   }
   file.names <- as.character(strReverse(sapply(strReverse(BAMS), function(x) strsplit(x, split = "\\/")[[1]][1])))
+  #################################################################################################################
   
-  if (saveBinned == T){
-    
-    ## store CPMs based on TMM with largebin counts:
-    message("Counting reads per bins for ", length(BAMS), " BAM files using ", CORES, " workers")
-    binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
-    
-    CPMcountsBins  <- data.frame( calculateCPM(object = normFactors(binned, se.out=data), use.norm.factors = T, log = F) )
-    colnames(CPMcountsBins) <- file.names
+  ## Normalize according to NORM parameter (peaks or bins as reference, default is peaks)
+  if (NORM == "peaks") {
+    message("Normalize counts based on peak counts")
+    data <- normFactors(data, se.out=data)
   }
   
-  message("Calculating normalization factors and storing counts")
+  if (NORM == "largebins") {
+    message("Normalize counts based on bin counts")
+    binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
+    data <- normFactors(binned, se.out=data)
+  }
+  
   ## store raw counts:
   RAWcounts <- data.frame(assay(data))
   colnames(RAWcounts) <- file.names
   
   ## store CPMs based on TMM with peak counts:
-  CPMcountsPeaks <- data.frame( calculateCPM(object = normFactors(data, se.out=data), use.norm.factors = T, log = F) )
-  colnames(CPMcountsPeaks) <- file.names
+  CPMcounts <- data.frame( calculateCPM(object = normFactors(data, se.out=data), use.norm.factors = T, log = F) )
+  colnames(CPMcounts) <- file.names
   
-  ## depending on the settings of NORM use either peaks or bins for downstream analysis
-  if (NORM == "peaks") {
-    data <- normFactors(data, se.out=data)
-  }
+  ## Save raw and CPM counts as GRanges:
+  raw.gr <- makeGRangesFromDataFrame(df = cbind( rowRanges(data), RAWcounts),
+                                     keep.extra.columns = T)
   
-  if (NORM == "largebins") {
-    data <- normFactors(binned, se.out=data)
-  }
+  cpm.gr <- makeGRangesFromDataFrame(df = cbind( rowRanges(data), CPMcounts),
+                                     keep.extra.columns = T)
+
+  assign( paste(NAME, "_countsRAW.gr", sep=""),
+          raw.gr, envir = .GlobalEnv)
   
-  ## Save counts:
-  assign( paste(NAME, "_countsRAW", sep=""),
-          RAWcounts, envir = .GlobalEnv)
-  
-  assign( paste(NAME, "_countsCPM_peaks", sep=""),
-          CPMcountsPeaks, envir = .GlobalEnv)
-  
-  if (saveBinned == T){
-    assign( paste(NAME, "_countsCPM_largebins", sep=""),
-            CPMcountsBins, envir = .GlobalEnv)
-  }
+  assign( paste(NAME, "_countsCPM.gr", sep=""),
+          cpm.gr, envir = .GlobalEnv)
   
   #################################################################################################################
   ## Produce MA plots, using the average per replicate group:
@@ -264,8 +254,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   if (plotMAall != "none") {
     
-    if (saveBinned == T) Do_MAplot(CPMs = CPMcountsBins, SUFFIX = "largebins")
-    Do_MAplot(CPMs = CPMcountsPeaks, SUFFIX = "peakbased")
+    Do_MAplot(CPMs = CPMcounts, SUFFIX = "peakbased")
     
   }
   
@@ -341,29 +330,29 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
 ################################################################################################################################################
 
 ## Example:
-tmp.bam1  <- list.files("~/IMTB/Our_Data/Fischer2019/ATAC-seq/bam/", full.names = T, pattern = "\\.bam$")
+#tmp.bam1  <- list.files("~/IMTB/Our_Data/Fischer2019/ATAC-seq/bam/", full.names = T, pattern = "\\.bam$")
+#
+#tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))#
 
-tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))
+#tmp.coldata1 <- data.frame(NAME      = tmp.name1,
+#                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
+#                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
+#                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
 
-tmp.coldata1 <- data.frame(NAME      = tmp.name1,
-                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
-                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
-                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
+#tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)#
 
-tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)
-
-tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
-                                Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-                                levels = tmp.design1)
+#tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
+                                #Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
+                                #levels = tmp.design1)
 
 ## Count reads and normalize:
-run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Our_Data/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
-                   BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
-                   BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks",
-                   CORES = 16, plotMAall = F, PLOTDIR = "~/testdir", saveBinned = F)
+#run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Our_Data/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
+#                   BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
+#                   BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks",
+#                   CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
 
 ## Estimate disp and fit GLM:
-edgeR_FitGLM(DATA = test_regionCounts, DESIGN = tmp.design1, NAME = "test")
+#edgeR_FitGLM(DATA = test_regionCounts, DESIGN = tmp.design1, NAME = "test")
 
 ## Test contrasts against an abs(FC) of 2:
-edgeR_TestContrasts(CONTRASTS = tmp.contrasts1, FIT = test_glmQLFit, GLMTREAT.FC = 2, RANGES = test_regionCounts, NAME = "test")
+#edgeR_TestContrasts(CONTRASTS = tmp.contrasts1, FIT = test_glmQLFit, GLMTREAT.FC = 2, RANGES = test_regionCounts, NAME = "test")
