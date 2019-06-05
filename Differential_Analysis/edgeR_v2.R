@@ -93,10 +93,10 @@ run_edgeR <- function(TXI,         ## tximport output
   for (i in 1:ncol(CONTRASTS)){
     
     current.FTest <- glmQLFTest(fit, contrast = CONTRASTS[,i])
-    assign( paste(NAME, "_glmQLFTest_", attr(contr, "dimnames")$Contrasts[i], sep=""), current.FTest, envir = .GlobalEnv)
+    assign( paste(NAME, "_glmQLFTest_", attr(CONTRASTS, "dimnames")$Contrasts[i], sep=""), current.FTest, envir = .GlobalEnv)
     
     current.TT    <- topTags(current.FTest, p.value = 1, n = Inf, sort.by = "none")
-    assign( paste(NAME, "_topTags_", attr(contr, "dimnames")$Contrasts[i], sep=""), current.TT, envir = .GlobalEnv)
+    assign( paste(NAME, "_topTags_", attr(CONTRASTS, "dimnames")$Contrasts[i], sep=""), current.TT, envir = .GlobalEnv)
   }
   
   ########################################################################################################################
