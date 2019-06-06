@@ -1,12 +1,14 @@
 ## Template for differential analysis of RNA-seq data with edgeR starting from tximport files:
 
-run_edgeR <- function(TXI,         ## tximport output
-                      COLDATA,     ## coldata specifying the levels for design
-                      DESIGN,      ## design parameter
-                      CONTRASTS,   ## contrasts to test
-                      NAME,        ## name assigned to this analysis
-                      plotMAall=F, ## T/F for plotting MAs for all combinations or only aggregated per group
-                      WORKINGDIR){ ## wdir for the plots to be saved
+run_edgeR <- function(TXI,            ## tximport output
+                      COLDATA,        ## coldata specifying the levels for design
+                      DESIGN,         ## design parameter
+                      CONTRASTS,      ## contrasts to test
+                      NAME,           ## name assigned to this analysis
+                      plotMAall=F,    ## T/F for plotting MAs for all combinations or only aggregated per group
+                      WORKINGDIR,     ## wdir for the plots to be saved
+                      GLMTREAT.FC=""  ## minimum fold change to test against
+                      ){ 
   
   ########################################################################################################################
   packageS <- c("tximport", "csaw", "statmod", "edgeR")
@@ -88,16 +90,28 @@ run_edgeR <- function(TXI,         ## tximport output
   fit <- glmQLFit(y, design = DESIGN)
   
   ## Test all specified contrasts:
-  message("Testing all contrasts")
+  message("Testing all contrasts (total of ", dim(CONTRASTS)[2],")")
   
-  for (i in 1:ncol(CONTRASTS)){
+  for (i in seq(1,dim(CONTRASTS)[2])){
+      
+      ## current contrast:
+      if (GLMTREAT.FC == ""){
+        message("Null hypothesis is FC=0")
+        current.results <- glmQLFTest(fit, contrast = CONTRASTS[,i])
+      }
     
-    current.FTest <- glmQLFTest(fit, contrast = CONTRASTS[,i])
-    assign( paste(NAME, "_glmQLFTest_", attr(CONTRASTS, "dimnames")$Contrasts[i], sep=""), current.FTest, envir = .GlobalEnv)
-    
-    current.TT    <- topTags(current.FTest, p.value = 1, n = Inf, sort.by = "none")
-    assign( paste(NAME, "_topTags_", attr(CONTRASTS, "dimnames")$Contrasts[i], sep=""), current.TT, envir = .GlobalEnv)
-  }
+      if (GLMTREAT.FC != "" && is.numeric(GLMTREAT.FC)){
+        message("Null hypothesis is FC = ",GLMTREAT.FC, " for ", attr(CONTRASTS, "dimnames")$Contrasts[i])
+        current.results <- glmTreat(glmfit = fit, contrast = CONTRASTS[,i], lfc = log2(GLMTREAT.FC))
+      }
+      
+      ## Save the FDR-adjusted TT:
+      current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
+      assign( paste(NAME, "_topTags_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
+              current.out, envir = .GlobalEnv)
+      rm(current.results)
+      
+    }
   
   ########################################################################################################################
   ## Produce MA plots, using the average per replicate group:
@@ -205,7 +219,7 @@ run_edgeR <- function(TXI,         ## tximport output
 #design <- model.matrix(~ 0 + FACTORIZED, data=coldata)
 
 #contr <- makeContrasts( KOuKOCa = FACTORIZEDB-FACTORIZEDA,
-#                       WUCaWTu = FACTORIZEDD-FACTORIZEDC ,
+#                        WUCaWTu = FACTORIZEDD-FACTORIZEDC ,
 #                        levels = design)
 
 #run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "test", plotMAall = "N", WORKINGDIR = "~/MUH")
