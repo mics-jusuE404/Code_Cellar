@@ -143,7 +143,7 @@ run_edgeR <- function(TXI,            ## tximport output
   
   ## get normalized counts
   
-  if (plotMAall == "N"){
+  if (plotMAall != "N"){
     if (plotMAall == F){
       message("Printing MA plots averaged over replicates")
       
