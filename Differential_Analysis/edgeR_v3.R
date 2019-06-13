@@ -2,8 +2,10 @@
 
 run_edgeR <- function(TXI,            ## tximport output
                       COLDATA,        ## coldata specifying the levels for design
-                      DESIGN,         ## design parameter
-                      CONTRASTS,      ## contrasts to test
+                      DESIGN="",      ## design parameter
+                      CONTRASTS="",   ## contrasts to test
+                      COUNTONLY=F,    ## only produce normalized counts without any stat. analysis
+                      FILTERBYEXPR=F, ## use filterByExpression function
                       NAME,           ## name assigned to this analysis
                       plotMAall=F,    ## T/F for plotting MAs for all combinations or only aggregated per group
                       WORKINGDIR,     ## wdir for the plots to be saved
@@ -51,8 +53,11 @@ run_edgeR <- function(TXI,            ## tximport output
   assign( paste(NAME, "_unfilteredDGElist", sep=""), y, envir = .GlobalEnv)
   
   # filtering
-  keep <- filterByExpr(y)
-  y <- y[keep, ]
+  if (FILTERBYEXPR == T){
+    keep <- filterByExpr(y)
+    y <- y[keep, ]  
+  }
+  
   
   ## Custom part: Export normalized counts following https://support.bioconductor.org/p/121087/,
   ## making ose of the offsets from tximport to correct for transcript length and depth/composition.
@@ -79,40 +84,43 @@ run_edgeR <- function(TXI,            ## tximport output
   assign( paste(NAME, "_MDS", sep=""), mds, envir = .GlobalEnv)
   
   ########################################################################################################################
-  ## Define samples via COLDATA:
-  y$group <- COLDATA
+  if (COUNTONLY == F){
   
-  ## dispersion estimate and model fit:
-  message("Gene-wise dispersion estimates")
-  y <- estimateDisp(y, design = DESIGN)
-  
-  message("GLM fitting")
-  fit <- glmQLFit(y, design = DESIGN)
-  
-  ## Test all specified contrasts:
-  message("Testing all contrasts (total of ", dim(CONTRASTS)[2],")")
-  
-  for (i in seq(1,dim(CONTRASTS)[2])){
-      
-      ## current contrast:
-      if (GLMTREAT.FC == ""){
-        message("Null hypothesis is FC=0")
-        current.results <- glmQLFTest(fit, contrast = CONTRASTS[,i])
-      }
+    ## Define samples via COLDATA:
+    y$group <- COLDATA
     
-      if (GLMTREAT.FC != "" && is.numeric(GLMTREAT.FC)){
-        message("Null hypothesis is FC = ",GLMTREAT.FC, " for ", attr(CONTRASTS, "dimnames")$Contrasts[i])
-        current.results <- glmTreat(glmfit = fit, contrast = CONTRASTS[,i], lfc = log2(GLMTREAT.FC))
-      }
+    ## dispersion estimate and model fit:
+    message("Gene-wise dispersion estimates")
+    y <- estimateDisp(y, design = DESIGN)
+    
+    message("GLM fitting")
+    fit <- glmQLFit(y, design = DESIGN)
+    
+    ## Test all specified contrasts:
+    message("Testing all contrasts (total of ", dim(CONTRASTS)[2],")")
+    
+    for (i in seq(1,dim(CONTRASTS)[2])){
+        
+        ## current contrast:
+        if (GLMTREAT.FC == ""){
+          message("Null hypothesis is FC=0")
+          current.results <- glmQLFTest(fit, contrast = CONTRASTS[,i])
+        }
       
-      ## Save the FDR-adjusted TT:
-      current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
-      assign( paste(NAME, "_topTags_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
-              current.out, envir = .GlobalEnv)
-      rm(current.results)
-      
+        if (GLMTREAT.FC != "" && is.numeric(GLMTREAT.FC)){
+          message("Null hypothesis is FC = ",GLMTREAT.FC, " for ", attr(CONTRASTS, "dimnames")$Contrasts[i])
+          current.results <- glmTreat(glmfit = fit, contrast = CONTRASTS[,i], lfc = log2(GLMTREAT.FC))
+        }
+        
+        ## Save the FDR-adjusted TT:
+        current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
+        assign( paste(NAME, "_topTags_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
+                current.out, envir = .GlobalEnv)
+        rm(current.results)
+        
     }
-  
+  }
+    
   ########################################################################################################################
   ## Produce MA plots, using the average per replicate group:
   plotMA_custom <- function(COUNTS, MAIN = ""){
