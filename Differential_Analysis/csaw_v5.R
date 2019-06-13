@@ -139,7 +139,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   if (NORM == "largebins") {
     message("Normalize counts based on bin counts")
-    binned <- windowCounts(BAMS, bin=TRUE, width=10000, param=PARAM)
+    binned <- windowCounts(BAMS, bin=TRUE, width=10000, BPPARAM = MulticoreParam(workers = CORES), param = PARAM)
     data <- normFactors(binned, se.out=data)
   }
   
@@ -234,7 +234,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
           
           plotMA_custom(COUNTS = tmp.df, MAIN = paste("Sample: ", paste(tmp.combn[,i], collapse=" vs "), sep=""))
           
-        }; dev.off()
+        }
+        dev.off()
       }
     }
     
@@ -258,7 +259,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
         
         plotMA_custom(COUNTS = tmp.df, MAIN = paste("Sample: ", paste(tmp.combn[,i], collapse=" vs "), sep=""))
         
-      }; dev.off()
+      }
+      dev.off()
     }
   }
   
