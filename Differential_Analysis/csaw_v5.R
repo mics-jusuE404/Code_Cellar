@@ -28,7 +28,8 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                FILTER_aveLogCPM = c(-1) ,    ## apply aveLogCPM filter default -1, set to "" to deactivate
                                CORES= c(detectCores()-1),    ## number of cores for read counting, default is all but one
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
-                               PLOTDIR                       ## the directory to save MA-plots
+                               PLOTDIR,                      ## the directory to save MA-plots
+                               FILENAMES = ""                ## file names to be used in MA plots (can be helpful if BAM files contain special chars)
                                ){              ## whether to calculate and save normalized counts based on large bins
   
   ## Check if required packages are installed:
@@ -121,7 +122,13 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   strReverse <- function(x){
     sapply(lapply(strsplit(x, NULL), rev), paste, collapse="")
   }
-  file.names <- as.character(strReverse(sapply(strReverse(BAMS), function(x) strsplit(x, split = "\\/")[[1]][1])))
+  
+  if (FILENAMES[1] == ""){
+    file.names <- as.character(strReverse(sapply(strReverse(BAMS), function(x) strsplit(x, split = "\\/")[[1]][1])))
+  }
+  if (FILENAMES[1] != ""){
+    file.names <- FILENAMES
+  }
   #################################################################################################################
   
   ## Normalize according to NORM parameter (peaks or bins as reference, default is peaks)
@@ -156,6 +163,9 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   assign( paste(NAME, "_countsCPM.gr", sep=""),
           cpm.gr, envir = .GlobalEnv)
+  
+  assign( paste(NAME, "_data", sep=""),
+          data, envir = .GlobalEnv)
   
   #################################################################################################################
   ## Produce MA plots, using the average per replicate group:
@@ -212,10 +222,10 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
           one <- CPMs[,grep(tmp.combn[1,i], colnames(CPMs))]
           two <- CPMs[,grep(tmp.combn[2,i], colnames(CPMs))]
           
-          if (ncol(one) == 1) average.one <- one
-          if (ncol(one) > 1) average.one <- rowMeans(one)
-          if (ncol(two) == 1) average.two <- two
-          if (ncol(two) > 1) average.two <- rowMeans(two)
+          if (ncol(data.frame(one)) == 1) average.one <- one
+          if (ncol(data.frame(one)) > 1) average.one <- rowMeans(one)
+          if (ncol(data.frame(two)) == 1) average.two <- two
+          if (ncol(data.frame(two)) > 1) average.two <- rowMeans(two)
           
           ## MA:
           tmp.df <- data.frame(average.one, average.two)
@@ -329,30 +339,36 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
 ################################################################################################################################################
 ################################################################################################################################################
 
-## Example:
-#tmp.bam1  <- list.files("~/IMTB/Our_Data/Fischer2019/ATAC-seq/bam/", full.names = T, pattern = "\\.bam$")
-#
-#tmp.name1 <- gsub(".bam", "", sapply(strsplit(tmp.bam1, split = "bam/"), function(x) x[2]))#
+#### EXAMPLES:
 
-#tmp.coldata1 <- data.frame(NAME      = tmp.name1,
-#                           GENOTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[1]),
-#                           CELLTYPE  = sapply(strsplit(tmp.name1, split="_"), function(x) x[2]),
+## List BAM files:
+#tmp.bam  <- list.files("~/path/to/bam/directory/", full.names = T, pattern = "\\.bam$")
+
+## Extract the names only:
+#tmp.name <- gsub(".bam", "", sapply(strsplit(tmp.bam, split = "bam/"), function(x) x[2]))#
+
+## Define coldata indicating groups, genotypes, whatever defines the samples:
+#tmp.coldata <- data.frame(NAME      = tmp.name,
+#                           GENOTYPE  = sapply(strsplit(tmp.name, split="_"), function(x) x[1]),
+#                           CELLTYPE  = sapply(strsplit(tmp.name, split="_"), function(x) x[2]),
 #                           FACTORIAL = sort(rep(c("A", "B", "C", "D"), 2)))
 
-#tmp.design1 <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata1)#
+## Design matrix for edgeR without intercept to have full control over contrasts:
+#tmp.design <- model.matrix(~ 0 + FACTORIAL, data=tmp.coldata)#
 
-#tmp.contrasts1 <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
+## Specify contrasts for all comparisons:
+#tmp.contrasts <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
                                 #Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-                                #levels = tmp.design1)
+                                #levels = tmp.design)
 
-## Count reads and normalize:
+## Count and normalize reads over specified peaks:
 #run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Our_Data/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
 #                   BLACKLIST = "/Volumes/Rumpelkammer/Genomes/mm10/mm10_consensusBL.bed", WIDTH = 200, 
-#                   BAMS = tmp.bam1, FRAGLEN = 1, PAIRED = F, NORM = "peaks",
+#                   BAMS = tmp.bam, FRAGLEN = 1, PAIRED = F, NORM = "peaks",
 #                   CORES = 16, plotMAall = F, PLOTDIR = "~/testdir")
 
 ## Estimate disp and fit GLM:
-#edgeR_FitGLM(DATA = test_regionCounts, DESIGN = tmp.design1, NAME = "test")
+#edgeR_FitGLM(DATA = test_regionCounts, DESIGN = tmp.design, NAME = "test")
 
-## Test contrasts against an abs(FC) of 2:
-#edgeR_TestContrasts(CONTRASTS = tmp.contrasts1, FIT = test_glmQLFit, GLMTREAT.FC = 2, RANGES = test_regionCounts, NAME = "test")
+## Test contrasts optionally against a minimum FC:
+#edgeR_TestContrasts(CONTRASTS = tmp.contrasts, FIT = test_glmQLFit, GLMTREAT.FC = 2, RANGES = test_regionCounts, NAME = "test")
