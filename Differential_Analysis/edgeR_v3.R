@@ -7,10 +7,12 @@ run_edgeR <- function(TXI,            ## tximport output
                       COUNTONLY=F,    ## only produce normalized counts without any stat. analysis
                       FILTERBYEXPR=F, ## use filterByExpression function
                       NAME,           ## name assigned to this analysis
-                      plotMAall=F,    ## T/F for plotting MAs for all combinations or only aggregated per group
-                      WORKINGDIR,     ## wdir for the plots to be saved
+                      plotMAall=F,    ## T/F for plotting MAs for all combinations or only aggregated per group or "none"
+                      PLOTDIR,     ## wdir for the plots to be saved
                       GLMTREAT.FC=""  ## minimum fold change to test against
                       ){ 
+  
+  GetDate <- function(){ format(Sys.Date(), "%Y%m%d") }
   
   ########################################################################################################################
   packageS <- c("tximport", "csaw", "statmod", "edgeR")
@@ -27,15 +29,10 @@ run_edgeR <- function(TXI,            ## tximport output
   message("")
   
   ########################################################################################################################
-  if (dir.exists(WORKINGDIR)){
-    message("Enter working directory ", WORKINGDIR)
-    setwd(WORKINGDIR)
-  }
   
-  if (!dir.exists(WORKINGDIR)){
-    message("Creating working directory ", WORKINGDIR)
-    dir.create(WORKINGDIR, showWarnings = T)
-    setwd(WORKINGDIR)
+  if (!dir.exists(PLOTDIR)){
+    message("Creating working directory ", PLOTDIR)
+    dir.create(PLOTDIR, showWarnings = T)
   }
   
   ########################################################################################################################
@@ -75,7 +72,7 @@ run_edgeR <- function(TXI,            ## tximport output
   ## Draw MDS:
   mds <- plotMDS(x = calculateCPM(se, use.norm.factors = F, use.offsets = T, log = T), bty="n", cex = 0.8, plot = F)
   
-  pdf(file = paste(NAME,"_MDSplot.pdf", sep="") , onefile=T, paper='A4r') 
+  pdf(file = paste(PLOTDIR, "/", GetDate(), "_", NAME,"_MDSplot.pdf", sep="") , onefile=T, paper='A4r') 
   plot(x = mds$x, y = mds$y, bty = "n", main = paste("MDS plot of ", NAME, sep=""), 
        xlim = c(floor(min(mds$x)), ceiling(max(mds$x))), ylim = c(floor(min(mds$y)), ceiling(max(mds$y))),
        pch = 20, cex=0.8)
@@ -151,7 +148,8 @@ run_edgeR <- function(TXI,            ## tximport output
   
   ## get normalized counts
   
-  if (plotMAall != "N"){
+  if (plotMAall != "none"){
+    
     if (plotMAall == F){
       message("Printing MA plots averaged over replicates")
       
@@ -166,7 +164,7 @@ run_edgeR <- function(TXI,            ## tximport output
         ## Make all pairwise comparisons:
         tmp.combn <- combn(x = names.unique, m = 2)
         
-        pdf(file = paste(NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
+        pdf(file = paste(PLOTDIR, "/", GetDate(), "_", NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
         par(mfrow=c(1,1), bty="n")
         for (i in 1:ncol(tmp.combn)){
           
@@ -195,7 +193,7 @@ run_edgeR <- function(TXI,            ## tximport output
       
       tmp.combn <- combn(x = colnames(se.cpm), m = 2)
       
-      pdf(file = paste(NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
+      pdf(file = paste(PLOTDIR, "/", GetDate(), "_", NAME,"_MAplots.pdf", sep="") , onefile=T, paper='A4') 
       par(mfrow=c(1,1), bty="n")
       for (i in 1:ncol(tmp.combn)){
         
@@ -230,5 +228,5 @@ run_edgeR <- function(TXI,            ## tximport output
 #                        WUCaWTu = FACTORIZEDD-FACTORIZEDC ,
 #                        levels = design)
 
-#run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "test", plotMAall = "N", WORKINGDIR = "~/MUH")
+#run_edgeR(TXI = txi, COLDATA = coldata, DESIGN = design, CONTRASTS = contr, NAME = "test", plotMAall = "N", PLOTDIR = "~/MUH")
 
