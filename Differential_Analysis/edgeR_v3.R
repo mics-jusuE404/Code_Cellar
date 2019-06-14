@@ -121,17 +121,20 @@ run_edgeR <- function(TXI,            ## tximport output
     
   ########################################################################################################################
   ## Produce MA plots, using the average per replicate group:
-  plotMA_custom <- function(COUNTS, MAIN = ""){
+  plotMA_custom <- function(COUNTS, MAIN = "", REPLACE.ZERO = 1){
     
     R=COUNTS[,1]
     G=COUNTS[,2]  
+    
+    R[which(R == 0)] <- REPLACE.ZERO
+    G[which(G == 0)] <- REPLACE.ZERO
     
     ## get mean of counts and log2FC
     M <- log2(R/G)
     A <- 0.5*log2(R*G)
     
     ## Decide y-axis limits based on rounded quantiles
-    YLIM <- c(floor(quantile(M, 0.0001, na.rm = T)), ceiling(quantile(M, 0.9999, na.rm = T)))
+    YLIM <- c(floor(quantile(M, 0.0001, na.rm=T)), ceiling(quantile(M, 0.9999, na.rm=T)))
     
     ## using smoothScatter
     par(bty="n")
@@ -172,10 +175,10 @@ run_edgeR <- function(TXI,            ## tximport output
           one <- se.cpm[,grep(tmp.combn[1,i], colnames(se.cpm))]
           two <- se.cpm[,grep(tmp.combn[2,i], colnames(se.cpm))]
           
-          if (ncol(one) == 1) average.one <- one
-          if (ncol(one) > 1) average.one <- rowMeans(one)
-          if (ncol(two) == 1) average.two <- two
-          if (ncol(two) > 1) average.two <- rowMeans(two)
+          if (ncol(data.frame(one)) == 1) average.one <- one
+          if (ncol(data.frame(one)) > 1) average.one <- rowMeans(one)
+          if (ncol(data.frame(two)) == 1) average.two <- two
+          if (ncol(data.frame(two)) > 1) average.two <- rowMeans(two)
           
           ## MA:
           tmp.df <- data.frame(average.one, average.two)
