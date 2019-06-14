@@ -111,6 +111,7 @@ run_edgeR <- function(TXI,            ## tximport output
         
         ## Save the FDR-adjusted TT:
         current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
+        current.out <- current.out$table
         assign( paste(NAME, "_topTags_", gsub("-", "_", attr(CONTRASTS, "dimnames")$Contrasts[i]), sep=""),
                 current.out, envir = .GlobalEnv)
         rm(current.results)
