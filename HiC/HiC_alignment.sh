@@ -96,10 +96,10 @@ function Fq2Bam {
   ## Align each mate pair with bowtie2:
   ADAPTER="AGATCGGAAGAGC"
   
-  cutadapt -j 1 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz" \
+  cutadapt -j 2 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz \
     | samblaster --ignoreUnmated \
-    | bowtie2 --reorder --very-sensitive-local --threads 16 -x "${IDX}" -U - \
-    | tee >(samtools flagstat - > "${BASENAME}".flagstat \
+    | bowtie2 --reorder --very-sensitive-local --threads 32 -x "${IDX}" -U - \
+    | tee >(samtools flagstat - > "${BASENAME}".flagstat) \
     | samtools view -@ 4 -o "${BASENAME}".bam
 
   ## Check if alignment went ok based on BAM file integrity:
