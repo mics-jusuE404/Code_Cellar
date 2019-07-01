@@ -50,7 +50,7 @@ function PathCheck {
 }; export -f PathCheck
 
 ## All tools:
-TOOLS=(bowtie2 cutadapt samtools multiqc)
+TOOLS=(bowtie2 cutadapt samtools multiqc fastqc)
 
 ## Loop through tools:
 for i in $(echo ${TOOLS[*]}); do
@@ -104,8 +104,8 @@ function Fq2Bam {
   ADAPTER="AGATCGGAAGAGC"
   
   cutadapt -j 2 -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz \
-    | samblaster --ignoreUnmated \
     | bowtie2 --reorder --very-sensitive-local --threads 32 -x "${IDX}" -U - \
+    | samblaster --ignoreUnmated \
     | tee >(samtools flagstat - > "${BASENAME}".flagstat) \
     | samtools view -@ 4 -o "${BASENAME}".bam
 
@@ -123,3 +123,5 @@ ls *.fastq.gz \
   | awk -F ".fastq.gz" '{print $1}' \
   | sort -u \
   | parallel -j $JOBS "Fq2Bam {} ${IDX} 2>> {}.log"
+  
+ls *.fastq.gz | parallel "fastqc {}"  
