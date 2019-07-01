@@ -19,10 +19,17 @@
 
 ## => JOBS can be set to 8 if using the SMP nodes or 4 if on the normal Skylake nodes
 
-MODE="UBAMPE"
 GENOME="mm10"
 JOBS=4
 
+if [[ ${GENOME} == "hg38" ]]; then
+  IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
+  fi
+  
+if [[ ${GENOME} == "mm10" ]]; then
+  IDX="/scratch/tmp/a_toen03/Genomes/mm10/bowtie2_idx/mm10"
+  fi  
+  
 ######################################################################################################################################
 ######################################################################################################################################
 
@@ -116,8 +123,3 @@ ls *.fastq.gz \
   | awk -F ".fastq.gz" '{print $1}' \
   | sort -u \
   | parallel -j $JOBS "Fq2Bam {} ${IDX} 2>> {}.log"
-  
-ls *.fastq.gz | parallel "fastqc {}"
-
-multiqc .
-
