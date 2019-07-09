@@ -87,7 +87,7 @@ Salmon2EdgeR <- function(SalmonDir,           ## the path to the folder with the
   se.cpm <- calculateCPM(se, use.norm.factors = F, use.offsets = T, log = F)
   
   ## Save everything as variable:
-  assign(x = paste(GlobalName, "_countsRaw", sep=""), value = se.cpm, envir = .GlobalEnv)
+  assign(x = paste(GlobalName, ".DGElist", sep=""), value = y, envir = .GlobalEnv)
   ## and to disk:
   if (!dir.exists("./Lists")) dir.create("./Lists")
   write.table(x = data.frame(GeneName=rownames(se.cpm), se.cpm), quote = F, row.names = F, col.names = T, sep="\t", 
