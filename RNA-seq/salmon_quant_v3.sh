@@ -17,7 +17,7 @@
 ## Use Salmon on FASTQ files, providing the basename:
 IDX="/scratch/tmp/a_toen03/Genomes/mm10/Gencode_M20/salmonIDX_Gencode_M20_k31"
 MODE="PE"
-TRIM="y"
+TRIM="n"
 
 ###################################################################################################################
 
@@ -100,8 +100,8 @@ function SALMON {
 
 ## Optional trimming:
 if [[ ${TRIM} == "y" ]]; then
-  ls *_1.fastq.gz | awk -F "_1.fastq" '{print $1}' | parallel -j 12 "Trim {} 2>> trimming_report.log
-  fi"
+  ls *_1.fastq.gz | awk -F "_1.fastq" '{print $1}' | parallel -j 12 "Trim {} 2>> trimming_report.log"
+  fi
   
 
 ## Run salmon:
