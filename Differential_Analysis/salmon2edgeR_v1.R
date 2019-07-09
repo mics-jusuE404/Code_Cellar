@@ -1,7 +1,7 @@
 ## Wrapper for tximport followed by edgeR (only quality control and CPM calculation, no DEG).
 ## See README.md for details.
 
-Salmon2edgeR <- function(SalmonDir,           ## the path to the folder with the samlom quantifications called <salmons>
+salmon2edgeR <- function(SalmonDir,           ## the path to the folder with the samlom quantifications called <salmons>
                          GlobalName,          ## a prefix to store all variables in
                          Tx2Gene = "",        ## the tab-delim list with transcript2gene conversions
                          FilterSmallRNAs = T, ## remove from tximport all smallRNAs as these are typically not well-captured
@@ -213,4 +213,4 @@ Salmon2edgeR <- function(SalmonDir,           ## the path to the folder with the
 }
 
 ## Example when leaving everything at default:
-## Salmon2edgeR(SalmonDir = "~/path/to/salmons/", plotMAall = F, GlobalName = "Testname")  
+## salmon2edgeR(SalmonDir = "~/path/to/salmons/", plotMAall = F, GlobalName = "Testname")  
