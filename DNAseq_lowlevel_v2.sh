@@ -587,7 +587,7 @@ if [[ ${ASSAY} == "ChIPseq" ]]; then
                 --keep-dup=all"
   		          
   ## Filter against blacklist:
-  ls *_FDR5perc_unfiltered_peaks.narrowPeak \
+  ls *_noControl_unfiltered_peaks.narrowPeak \
     | awk -F "_noControl_unfiltered_peaks.narrowPeak" '{print $1}' \
     | parallel "bedtools intersect -v -a {}_noControl_unfiltered_peaks.narrowPeak \
                                    -b ${BLACKLIST} > {}_noControl_filtered_peaks.narrowPeak"
@@ -613,9 +613,9 @@ if [[ ${ASSAY} == "ATACseq" ]]; then
 ## FRiPs for ChIP-seq from BAM files  
 if [[ ${ASSAY} == "ChIPseq" ]]; then
 
-  ls *_noControl_peaks.narrowPeak \
+  ls *_noControl_filtered_peaks.narrowPeak \
   | awk -F "_noControl" '{print $1}' \
-  | parallel -j 8 "FRiP_ChIP {}_noControl_peaks.narrowPeak {}_dedup.bam ${MODE} 2>> {}.log" > FRiP_scores.txt
+  | parallel -j 8 "FRiP_ChIP {}_noControl_filtered_peaks.narrowPeak {}_dedup.bam ${MODE} 2>> {}.log" > FRiP_scores.txt
   
   fi
   
