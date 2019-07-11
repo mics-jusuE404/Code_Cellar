@@ -266,7 +266,10 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   if (plotMAall != "none") {
     
-    Do_MAplot(CPMs = CPMcounts, SUFFIX = "peakbased")
+    if (NORM == "peakbased") suf <- "peaks"
+    if (NORM == "largebins") suf <- "largebins"
+    
+    Do_MAplot(CPMs = CPMcounts, SUFFIX = suf)
     
   }
   
