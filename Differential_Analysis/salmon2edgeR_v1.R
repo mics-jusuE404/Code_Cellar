@@ -6,7 +6,8 @@ salmon2edgeR <- function(SalmonDir,           ## the path to the folder with the
                          Tx2Gene = "",        ## the tab-delim list with transcript2gene conversions
                          FilterSmallRNAs = T, ## remove from tximport all smallRNAs as these are typically not well-captured
                          FilterFile = "",     ## if "" use the internal default or specify a new file with gene names to be filtered
-                         plotMAall = F        ## T/F/none to plot all possible combination, averaged per group or nothing
+                         plotMAall = F,       ## T/F/none to plot all possible combination, averaged per group or nothing
+                         Return.tximport = F  ## whether to save the tximport as variable
                          
 ){
   GetDate <- function(){ format(Sys.Date(), "%Y%m%d") }
@@ -65,6 +66,8 @@ salmon2edgeR <- function(SalmonDir,           ## the path to the folder with the
   } else {
     message("Removing smallRNAs is set to FALSE")
   }
+  
+  if (Return.tximport == T) assign(paste(GlobalName, ".tximport", sep=""), txi, envir = .GlobalEnv)
   
   ####################################################################################################################################################
   
@@ -207,6 +210,8 @@ salmon2edgeR <- function(SalmonDir,           ## the path to the folder with the
       }; suppressMessages(dev.off())
     }
   }
+  
+  
   
   ####################################################################################################################################################
   
