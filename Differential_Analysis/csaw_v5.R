@@ -30,7 +30,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
                                plotMAall = F,                ## plot no (none), all possible (T) or group-wise (N) MA-plots
                                PLOTDIR,                      ## the directory to save MA-plots
                                FILENAMES = ""                ## file names to be used in MA plots (can be helpful if BAM files contain special chars)
-                               ){              ## whether to calculate and save normalized counts based on large bins
+){              ## whether to calculate and save normalized counts based on large bins
   
   ## Check if required packages are installed:
   packageS <- c("csaw", "statmod", "edgeR", "GenomicAlignments", "data.table")
@@ -116,7 +116,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
     data <- data[keep,]
     
   }
-
+  
   #################################################################################################################
   ## Function returns the file name (essentially everything in full path after the last "/"):
   strReverse <- function(x){
@@ -157,7 +157,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   cpm.gr <- makeGRangesFromDataFrame(df = cbind( rowRanges(data), CPMcounts),
                                      keep.extra.columns = T)
-
+  
   assign( paste(NAME, "_countsRAW.gr", sep=""),
           raw.gr, envir = .GlobalEnv)
   
@@ -166,6 +166,17 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   assign( paste(NAME, "_data", sep=""),
           data, envir = .GlobalEnv)
+  
+  ## Also save to disk:
+  if (!dir.exists("./Lists")) dir.create("./Lists")
+  
+  GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
+  
+  write.table(data.frame(raw.gr), quote = F, col.names = T, row.names = F, sep="\t", 
+              file = paste("./Lists/", GetDate(), "/", NAME, "_countsRAW.tsv", sep=""))
+  write.table(data.frame(cpm.gr), quote = F, col.names = T, row.names = F, sep="\t", 
+              file = paste("./Lists/", GetDate(), "/", NAME, "_countsCPM.tsv", sep=""))
+  
   
   #################################################################################################################
   ## Produce MA plots, using the average per replicate group:
@@ -266,7 +277,7 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   
   if (plotMAall != "none") {
     
-    if (NORM == "peakbased") suf <- "peaks"
+    if (NORM == "peaks") suf <- "peakbased"
     if (NORM == "largebins") suf <- "largebins"
     
     Do_MAplot(CPMs = CPMcounts, SUFFIX = suf)
@@ -363,8 +374,8 @@ edgeR_TestContrasts <- function(CONTRASTS,       ## the output of makeContrasts(
 
 ## Specify contrasts for all comparisons:
 #tmp.contrasts <- makeContrasts(Contr.Interaction = (FACTORIALA-FACTORIALB) - (FACTORIALC-FACTORIALD),
-                                #Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
-                                #levels = tmp.design)
+#Contr.Average     = (FACTORIALA+FACTORIALC)/2 - (FACTORIALB+FACTORIALD)/2,
+#levels = tmp.design)
 
 ## Count and normalize reads over specified peaks:
 #run_csaw_peakBased(NAME = "test", SUMMITS = "~/IMTB/Our_Data/Fischer2019/ATAC-seq/peaks/ATACseq_combinedCall_summits.bed", 
