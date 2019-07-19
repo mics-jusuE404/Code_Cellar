@@ -173,9 +173,9 @@ run_csaw_peakBased <- function(NAME,                         ## the name assigne
   GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
   
   write.table(data.frame(raw.gr), quote = F, col.names = T, row.names = F, sep="\t", 
-              file = paste("./Lists/", GetDate(), "/", NAME, "_countsRAW.tsv", sep=""))
+              file = paste("./Lists/", GetDate(), "_", NAME, "_countsRAW.tsv", sep=""))
   write.table(data.frame(cpm.gr), quote = F, col.names = T, row.names = F, sep="\t", 
-              file = paste("./Lists/", GetDate(), "/", NAME, "_countsCPM.tsv", sep=""))
+              file = paste("./Lists/", GetDate(), "_", NAME, "_countsCPM.tsv", sep=""))
   
   
   #################################################################################################################
