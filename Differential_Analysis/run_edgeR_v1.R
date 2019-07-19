@@ -9,7 +9,7 @@ run_edgeR <- function(DGElist,        ## the DGElist produced by salmon2edgeR_v*
                       GlmTreat.Fc=""  ## minimum fold change to test against
   ){ 
   
-  GetDate <- function(){ format(Sys.Date(), "%Y%m%d") }
+  GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
   
   ########################################################################################################################
   
@@ -29,8 +29,10 @@ run_edgeR <- function(DGElist,        ## the DGElist produced by salmon2edgeR_v*
   y$group <- Coldata
   
   ## apply recommended filter:
-  keep <- filterByExpr(y)
-  y <- y[keep, , keep.lib.sizes=FALSE]
+  if (FilterByExpr == T){
+    keep <- filterByExpr(y, design = Design)
+    y <- y[keep, , keep.lib.sizes=FALSE]
+  }
     
   ## dispersion estimates:
   message("Gene-wise dispersion estimates")
