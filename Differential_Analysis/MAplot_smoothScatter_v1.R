@@ -62,12 +62,12 @@ MAplot_smoothScatter <- function(Input,                      ## a topTags (edgeR
   
   points(x = logcpm[which(logfc < lower.limit)], 
          y = rep( (lower.limit - lower.limit*0.025), length(which(logfc < lower.limit))),
-         pch=17, cex = 0.7, col=Signif.ColorCOL) 
+         pch=17, cex = 0.7, col=Signif.Color) 
   
   upper.limit <- par("usr")[4]
   points(x = logcpm[which(logfc > upper.limit)], 
          y = rep( (upper.limit - upper.limit*0.025), length(which(logfc > upper.limit))),
-         pch=17, cex = 0.7, col=Signif.ColorCOL) 
+         pch=17, cex = 0.7, col=Signif.Color) 
   
   ###############################################################################################################
   
