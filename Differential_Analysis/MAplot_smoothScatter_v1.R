@@ -1,5 +1,4 @@
-## Take a topTags() output from csaw/edgeR and a significance threshold and 
-## produce an MA-plot with signif. regions colored in firebrick:
+## MAplots from edgeR's topTags or DESeq2's results objects coloring significant genes.
 
 MAplot_smoothScatter <- function(Input,                      ## a topTags (edgeR) or results (DESeq2) object
                                  Preset = "DESeq2",          ## DESeq2 or edgeR naming convestions for colnames
