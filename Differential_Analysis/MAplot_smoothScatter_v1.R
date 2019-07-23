@@ -2,7 +2,7 @@
 ## produce an MA-plot with signif. regions colored in firebrick:
 
 MAplot_smoothScatter <- function(Input,                      ## a topTags (edgeR) or results (DESeq2) object
-                                 Preset = "DESeq2",          ## DESeq2 or edgeR
+                                 Preset = "DESeq2",          ## DESeq2 or edgeR naming convestions for colnames
                                  Signif.Thresh = 0.05,       ## color genes below this padj/FDR in Signif.Color
                                  Signif.Color = "firebrick", ## guess what this option does
                                  Ylim = "",                  ## ylim, e.g. c(-4,4), if empty choose automatically
@@ -15,7 +15,7 @@ MAplot_smoothScatter <- function(Input,                      ## a topTags (edgeR
   ## Get fold change, average expression and padj/FDR from Input:
   if (Preset == "DESeq2"){
     logfc  <- Input$log2FoldChange
-    logcpm <- log2(Input$baseMean+1) ## as DESeq2 does reports non-logged counts
+    logcpm <- log2(Input$baseMean+1) ## as DESeq2 does report non-logged counts
     fdr    <- Input$padj
   }
   
