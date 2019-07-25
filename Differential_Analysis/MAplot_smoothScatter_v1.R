@@ -13,6 +13,7 @@ MAplot_smoothScatter <- function(Input,                      ## a topTags (edgeR
   
   ## Get fold change, average expression and padj/FDR from Input:
   if (Preset == "DESeq2"){
+    message("Careful, there is some odd behaviour when DESeq2's results object contains NAs which I haven't checked yet")
     logfc  <- Input$log2FoldChange
     logcpm <- log2(Input$baseMean+1) ## as DESeq2 does reports non-logged counts
     fdr    <- Input$padj
