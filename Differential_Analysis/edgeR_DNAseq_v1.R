@@ -456,7 +456,7 @@ csaw_counts2TopTags <-
     
     ## save environment, simple dummy file name, should alter be renamed properly to match the script.R name                                           
     if (Save.Image == TRUE){
-      save.image(paste(WorkingDir, "/R/", GetDate(), , "_", ImageName, sep=""))
+      save.image(paste(WorkingDir, "/R/", GetDate(), "_", ImageName, ".Rdata" ,sep=""))
       
     }
     
