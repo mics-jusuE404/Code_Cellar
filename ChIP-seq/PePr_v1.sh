@@ -68,8 +68,8 @@ function PEPPER {
 
 ## grouplevel undiff:
 #ls *_dedup.bam | grep -v 'IgG' | grep '_undiff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
-#  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> {}_pepr.log"
+#  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> ./PepperDir/{}_pepr.log"
   
 ## grouplevel diff:
 #ls *_dedup.bam | grep -v 'IgG' | grep '_diff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
-#  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> {}_pepr.log"
+#  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> ./PepperDir/{}_pepr.log"
