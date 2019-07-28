@@ -38,7 +38,7 @@ function GENRICHGROUP {
     exit 0
     fi
   
-  FILES=$(ls ${BASENAME}*dedup.bam | xargs | awk '{ print "\""$0"\""}')
+  FILES=$(ls ${BASENAME}*dedup.bam | xargs | awk '{gsub(" ", ",");print}')
   
   Genrich -E $2 -t $FILES -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
   
