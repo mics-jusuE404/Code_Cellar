@@ -47,7 +47,7 @@ csaw_counts2TopTags <-
     if (class(Counts.gr) != "GRanges")         stop(call. = FALSE, "==> Counts.gr must be GRanges")
     if (ncol(elementMetadata(Counts.gr)) == 0) stop(call. = FALSE, "==> Counts.gr appears to have no count data")
     
-    if (!is.numeric(as.matrix(elementMetadata(counts.gr)))) {
+    if (!is.numeric(as.matrix(elementMetadata(Counts.gr)))) {
       stop(call. = FALSE, "==> Counts.gr seems to contain non-numeric values")
     }
     
@@ -155,15 +155,15 @@ csaw_counts2TopTags <-
     
     ## Calculate per-millions:
     message("Calculating CPMs")
-    CPM.counts.gr <- Counts.gr[,0]
+    CPM.Counts.gr <- Counts.gr[,0]
     
-    elementMetadata(CPM.counts.gr) <- as.matrix(
+    elementMetadata(CPM.Counts.gr) <- as.matrix(
       calculateCPM(object = data.se, use.norm.factors = T, log = F))
     
     ## Save cpm to disk:
     if (WriteCpmToDisk == TRUE){
       message("Writing CPMs to disk")
-      write.table(x = data.frame(CPM.counts.gr)[,-c(4,5)], 
+      write.table(x = data.frame(CPM.Counts.gr)[,-c(4,5)], 
                   file = paste(WorkingDir, "Lists/", 
                                GetDate(),"_", Basename, "_normCounts.tsv",
                                sep=""),
@@ -276,7 +276,7 @@ csaw_counts2TopTags <-
       par(mfrow=c(1,1), bty="n")
       pdf(paper = "a4", file = paste(WorkingDir,"./Plots/", GetDate(), "_MAplots_", SUFFIX, ".pdf", sep=""))
       
-      Do_MAplot(CPMs = data.frame(elementMetadata(CPM.counts.gr)))
+      Do_MAplot(CPMs = data.frame(elementMetadata(CPM.Counts.gr)))
       
       dev.off()
       
@@ -289,9 +289,9 @@ csaw_counts2TopTags <-
       message("Plotting PCA")
       
       rse <- SummarizedExperiment(
-        list(counts=as.matrix(elementMetadata(CPM.counts.gr))))
+        list(counts=as.matrix(elementMetadata(CPM.Counts.gr))))
       
-      rowRanges(rse) <- CPM.counts.gr[,0]
+      rowRanges(rse) <- CPM.Counts.gr[,0]
       rse <- DESeqTransform(rse)
       rownames(colData(rse)) <- colnames(rse)
       colData(rse)$group <- as.factor(sapply(strsplit(colnames(rse), split="_rep"), function(x)x[1]))
