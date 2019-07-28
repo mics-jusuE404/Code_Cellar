@@ -16,7 +16,7 @@ function PEPPER {
   
   ## If IP is unreplicated:
   if [[ $(ls ${BASENAME_IP}*dedup.bam | wc -l) < 2 ]]; then
-    echo '[ERROR]: PePr requires at least n=2 for ChIP samples.
+    echo '[ERROR]: PePr requires at least n=2 for ChIP samples.'
     exit 1
     fi
   
