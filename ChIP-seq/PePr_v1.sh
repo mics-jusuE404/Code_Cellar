@@ -67,7 +67,7 @@ function PEPPER {
     --chip=${CHIP} \
     --input=${IGG} \
     --file-type=${BAMTYPE} \
-    --remove-artifacts  
+    --remove-artefacts  
     
   mv ./PepperDir/${BASENAME_IP}__PePr_peaks.bed.passed ./PepperDir/${BASENAME_IP}_PePr_peaks_passed.bed
 
@@ -76,9 +76,9 @@ function PEPPER {
 ## Template: PEPPER chipbase iggname bamtype thresh peaktype 
 
 ## grouplevel undiff:
-#ls *_dedup.bam | grep -v 'IgG' | grep '_undiff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
-#  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> ./PepperDir/{}_pepr.log"
+ls *_dedup.bam | grep -v 'IgG' | grep '_undiff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
+  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> ./PepperDir/{}_pepr.log"
   
 ## grouplevel diff:
-#ls *_dedup.bam | grep -v 'IgG' | grep '_diff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
-#  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> ./PepperDir/{}_pepr.log"
+ls *_dedup.bam | grep -v 'IgG' | grep '_diff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
+  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> ./PepperDir/{}_pepr.log"
