@@ -17,7 +17,8 @@ csaw_counts2TopTags <-
            FiltByExpr = FALSE,             ## whether or not to use that filter
            Contrasts = NULL,               ## contrasts to test
            Thresh.glmTreat = NULL,         ## minFC to test against
-           Save.Image = T                  ## whether to save Rdata to ./WorkingDir/R
+           Save.Image = TRUE,              ## whether to save Rdata to ./WorkingDir/R
+           ImageName = "tmp"               ## name for the image to be saved
   )
   {
     
@@ -455,7 +456,7 @@ csaw_counts2TopTags <-
     
     ## save environment, simple dummy file name, should alter be renamed properly to match the script.R name                                           
     if (Save.Image == TRUE){
-      save.image(paste(WorkingDir, "/R/", GetDate(), "_tmpRdata.Rdata", sep=""))
+      save.image(paste(WorkingDir, "/R/", GetDate(), , "_", ImageName, sep=""))
       
     }
     
