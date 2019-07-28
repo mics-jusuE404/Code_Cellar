@@ -36,6 +36,7 @@ function GENRICHGROUP {
   if [[ $(ls ${BASENAME}*dedup.bam | wc -l) < 2 ]]; then
     echo '[WARNING]: Only one sample found for' $BASENAME '-- skipping group-level peak calling'
     exit 0
+    fi
   
   FILES=$(ls ${BASENAME}*dedup.bam | xargs | awk '{ print "\""$0"\""}')
   
