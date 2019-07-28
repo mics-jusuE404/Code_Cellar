@@ -15,8 +15,9 @@ function PEPPER {
   ######################################################################################################
   
   ## If IP is unreplicated:
-  if [[ $(ls ${BASENAME_IP}*dedup.bam | wc -l) == 2 ]]; then
-    CHIP=$(ls ${BASENAME_IP}*dedup.bam)
+  if [[ $(ls ${BASENAME_IP}*dedup.bam | wc -l) < 2 ]]; then
+    echo '[ERROR]: PePr requires at least n=2 for ChIP samples.
+    exit 1
     fi
   
   ## if replicates for IP:  
@@ -59,24 +60,16 @@ function PEPPER {
     --file-type=${BAMTYPE} \
     --remove-artifacts  
     
-  mv ${BASENAME_IP}__PePr_peaks.bed.passed ${BASENAME_IP}_PePr_peaks_passed.bed
+  mv ./PepperDir/${BASENAME_IP}__PePr_peaks.bed.passed ./PepperDir/${BASENAME_IP}_PePr_peaks_passed.bed
 
 }; export -f PEPPER 
 
 ## Template: PEPPER chipbase iggname bamtype thresh peaktype 
 
 ## grouplevel undiff:
-ls *_dedup.bam | grep -v 'IgG' | grep '_undiff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
-  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> {}.log"
+#ls *_dedup.bam | grep -v 'IgG' | grep '_undiff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
+#  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> {}_pepr.log"
   
 ## grouplevel diff:
-ls *_dedup.bam | grep -v 'IgG' | grep '_diff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
-  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> {}.log"
-  
-## single undiff:  
-ls *_dedup.bam | grep -v 'IgG' | grep '_undiff' | awk -F "_dedup" '{print $1 | "sort -u" }' | \
-  parallel "PEPPER {} IgG_undiff bam 0.01 sharp 2> {}.log"
-  
-## single diff:  
-ls *_dedup.bam | grep -v 'IgG' | grep '_diff' | awk -F "_dedup" '{print $1 | "sort -u" }' | \
-  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> {}.log"  
+#ls *_dedup.bam | grep -v 'IgG' | grep '_diff' | awk -F "_rep" '{print $1 | "sort -u" }' | \
+#  parallel "PEPPER {} IgG_diff bam 0.01 sharp 2> {}_pepr.log"
