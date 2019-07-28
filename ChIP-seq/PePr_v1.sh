@@ -1,5 +1,14 @@
 #!/bin/bash
 
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=72
+#SBATCH --partition=normal
+#SBATCH --mem=80G
+#SBATCH --time=48:00:00 
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=a_toen03@uni-muenster.de
+#SBATCH --job-name=PePr
+
 ## Wrapper for peak calling on ChIP-seq data using PePr on replicate groups and single files:
 
 if [[ ! -e ./PepperDir ]]; then mkdir PepperDir; fi
