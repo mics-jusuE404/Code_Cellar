@@ -7,8 +7,8 @@ annotatR_Pie <- function(Ranges,
                          Annotations = NULL, 
                          Return.Annot = TRUE, 
                          Plot.Pie = TRUE,
-                         Main.Plot = NULL,
-                         Plot.Path = "./pie.pdf"){
+                         Main.Plot = NULL
+                         ){
   
   
   ##############################################################################################################################################
@@ -43,10 +43,8 @@ annotatR_Pie <- function(Ranges,
     summarize_annotations(annotate_regions(regions = Ranges, 
                                            annotations = tmp.annot, 
                                            ignore.strand = TRUE, 
-                                           quiet = TRUE))
+                                           ))
   )
-  
-  if (isTRUE(Return.Annot)) return(tmp.summarized)
   
   ## Plot
   if (Plot.Pie == TRUE){
@@ -62,7 +60,6 @@ annotatR_Pie <- function(Ranges,
     if (is.null(Main.Plot))  tmp.main  <- deparse(substitute(Ranges))
     if (!is.null(Main.Plot)) tmp.main  <- Main.Plot
     
-    pdf(Plot.Path, paper="a4")
     par(oma=c(0,0,0,0), mar=c(0,0,0,0))
     print(pie(tmp.perc, labels = "", col = tmp.col, lty = 1, lwd = 1, radius = 0.25))
     
@@ -75,8 +72,9 @@ annotatR_Pie <- function(Ranges,
            legend = tmp.text, fill = tmp.col, bty="n", horiz = F, 
            y.intersp = 1.4, x.intersp = 0.5, text.font=1, cex=1, ncol = 2, text.width=0.25)
   }
-  dev.off()
-  
+  if (Return.Annot == TRUE) return(tmp.summarized)
 }
 
 ################################################################################################################################################
+
+
