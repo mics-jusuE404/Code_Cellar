@@ -1,4 +1,4 @@
-## Wrapper to annotate genomic regions with annotatr and plotting of a nice pie :)
+## Wrapper to annotate genomic regions with annotatr
 
 ################################################################################################################################################
 
@@ -7,7 +7,8 @@ annotatR_Pie <- function(Ranges,
                          Annotations = NULL, 
                          Return.Annot = TRUE, 
                          Plot.Pie = TRUE,
-                         Main.Plot = NULL){
+                         Main.Plot = NULL,
+                         Plot.Path = "./pie.pdf"){
   
   
   ##############################################################################################################################################
@@ -51,17 +52,18 @@ annotatR_Pie <- function(Ranges,
   if (Plot.Pie == TRUE){
 
     message("Plotting pie")
-    par(oma=c(0,0,0,0), mar=c(0,0,0,0))
     tmp.sum  <- sum(tmp.summarized$n)
     tmp.perc <- round( (tmp.summarized$n / tmp.sum) * 100, digits = 2)
   
     if(is.null(Colors)) {
-      tmp.col <- c("firebrick", "skyblue4", "black", "darkorange3", "goldenrod3", "darkblue", "darkolivegreen4")
+      tmp.col <- c("darkblue", "skyblue4", "black", "darkorange3", "goldenrod3", "firebrick", "darkolivegreen4")
     }
     
     if (is.null(Main.Plot))  tmp.main  <- deparse(substitute(Ranges))
     if (!is.null(Main.Plot)) tmp.main  <- Main.Plot
     
+    pdf(Plot.Path, paper="a4")
+    par(oma=c(0,0,0,0), mar=c(0,0,0,0))
     print(pie(tmp.perc, labels = "", col = tmp.col, lty = 1, lwd = 1, radius = 0.25))
     
     text(x=0, y = 0.34, labels = paste(tmp.main, paste0( "(", length(Ranges), " regions", ")" ) ), font = 2)
@@ -72,7 +74,8 @@ annotatR_Pie <- function(Ranges,
     legend(x = -0.32, y = -0.25, 
            legend = tmp.text, fill = tmp.col, bty="n", horiz = F, 
            y.intersp = 1.4, x.intersp = 0.5, text.font=1, cex=1, ncol = 2, text.width=0.25)
-    }
+  }
+  dev.off()
   
 }
 
