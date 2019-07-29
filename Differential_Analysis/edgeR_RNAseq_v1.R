@@ -183,7 +183,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   assign(x = paste(Basename, "_CPM.df", sep=""), value = data.frame(se.cpm), envir = .GlobalEnv)
   
   if (!dir.exists("./Lists")) dir.create("./Lists")
-  write.table(x = data.frame(GeneName=rownames(se.cpm), se.cpm), quote = F, row.names = F, col.names = T, sep="\t", 
+  write.table(x = data.frame(Gene=rownames(se.cpm), se.cpm), quote = F, row.names = F, col.names = T, sep="\t", 
               file = paste("./Lists/", paste(GetDate(), Basename, "CPM.tsv", sep="_"), sep = ""))
   
   ## New SE object for later use with DESeq2::plotPCA:
