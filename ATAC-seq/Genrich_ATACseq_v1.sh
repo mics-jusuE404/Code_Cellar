@@ -31,6 +31,7 @@ cd GenrichDir
 function GENRICHGROUP {
   
   BASENAME=$1
+  MODE=$3
   
   ## Only if replicates are present:
   if [[ $(ls ${BASENAME}*dedup.bam | wc -l) < 2 ]]; then
@@ -40,11 +41,19 @@ function GENRICHGROUP {
   
   FILES=$(ls ${BASENAME}*dedup.bam | xargs | awk '{gsub(" ", ",");print}')
   
-  Genrich -E $2 -t $FILES -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
+  if [[ ${MODE} == "PE" ]]; then
+    Genrich -E $2 -t $FILES -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
+    fi
+    
+  if [[ ${MODE} == "SE" ]]; then  
+    Genrich -E $2 -t $FILES -y -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
+    fi
+    
   
 }; export -f GENRICHGROUP
 
-ls *_dedup.bam | awk -F "_rep" '{print $1 | "sort -u"}' | parallel "GENRICHGROUP {} $Blacklist 2> {}_genrich.log"
+## PE: ls *_dedup.bam | awk -F "_rep" '{print $1 | "sort -u"}' | parallel "GENRICHGROUP {} $Blacklist PE 2> {}_genrich.log"
+## SE: ls *_dedup.bam | awk -F "_rep" '{print $1 | "sort -u"}' | parallel "GENRICHGROUP {} $Blacklist SE 2> {}_genrich.log"
 
 ########################################################################################################################
 
@@ -52,9 +61,17 @@ ls *_dedup.bam | awk -F "_rep" '{print $1 | "sort -u"}' | parallel "GENRICHGROUP
 function GENRICHSINGLE {
   
   BASENAME=$1
+  MODE=$3
   
-  Genrich -E $2 -t ${BASENAME}_dedup.bam -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
+  if [[ ${MODE} == "PE" ]]; then
+    Genrich -E $2 -t ${BASENAME}_dedup.bam -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
+    fi
+    
+  if [[ ${MODE} == "SE" ]]; then  
+    Genrich -E $2 -t ${BASENAME}_dedup.bam -y -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
+    fi
   
 }; export -f GENRICHSINGLE
 
-ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} $Blacklist 2> {}_genrich.log"
+## PE: ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} PE $Blacklist 2> {}_genrich.log"
+## SE: ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} SE $Blacklist 2> {}_genrich.log"
