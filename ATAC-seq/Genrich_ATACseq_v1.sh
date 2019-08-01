@@ -73,5 +73,5 @@ function GENRICHSINGLE {
   
 }; export -f GENRICHSINGLE
 
-## PE: ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} PE $Blacklist 2> {}_genrich.log"
-## SE: ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} SE $Blacklist 2> {}_genrich.log"
+## PE: ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} $Blacklist PE 2> {}_genrich.log"
+## SE: ls *_dedup.bam | awk -F "_dedup.bam" '{print $1}' | parallel -j 8 "GENRICHSINGLE {} $Blacklist SE 2> {}_genrich.log"
