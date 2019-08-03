@@ -34,7 +34,7 @@ function GENRICH {
     fi
   
   ## trigger single mode:
-  if [[ ${Group} == "single " ]]; then
+  if [[ ${Group} == "single" ]]; then
     FILES=${Basename}_dedup.bam
     FDR=0.05
     fi
