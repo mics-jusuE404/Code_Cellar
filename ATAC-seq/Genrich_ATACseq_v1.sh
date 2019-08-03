@@ -11,6 +11,8 @@
 #SBATCH --mail-user=a_toen03@uni-muenster.de
 #SBATCH --job-name=Genrich
 
+########################################################################################################################
+
 ## mm10 consensus blacklist for ATAC-seq:
 Blacklist="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
 
