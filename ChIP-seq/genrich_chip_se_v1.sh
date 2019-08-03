@@ -20,14 +20,15 @@ function GENRICH {
   Length=$3
   Group=$4
   
-  ## Only if replicates are present:
-  if [[ $(ls ${Basename}*dedup.bam | wc -l) < 2 ]]; then
-    echo '[WARNING]: Only one sample found for' $Basename '-- skipping group-level peak calling'
-    exit 0
-    fi
-  
   ## trigger grouped mode:
   if [[ ${Group} == "group" ]]; then
+  
+    ## check if replicates are indeed present:
+    if [[ $(ls ${Basename}*dedup.bam | wc -l) < 2 ]]; then
+      echo '[WARNING]: Only one sample found for' $Basename '-- skipping group-level peak calling'
+      exit 0
+      fi
+      
     FILES=$(ls ${Basename}*dedup.bam | xargs | awk '{gsub(" ", ",");print}')
     FDR=0.01
     fi
