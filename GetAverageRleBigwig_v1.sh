@@ -130,4 +130,4 @@ function BigWigMean {
  
 }; export -f BigWigMean
 
-ls *_rep*rle.bigwig | awk -F "_rep" '{print $1}' | parallel -j 4 "BigWigMean {} ${Wiggle}"
+ls *_rep*rle.bigwig | awk -F "_rep" '{print $1 | "sort -u"}' | parallel -j 4 "BigWigMean {} ${Wiggle}"
