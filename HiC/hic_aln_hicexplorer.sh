@@ -17,10 +17,10 @@
 ######################################################################################################################################
 ######################################################################################################################################
 
-## => JOBS can be set to 8 if using the SMP nodes or 4 if on the normal Skylake nodes
+## => JOBS can be set to 4 if using the SMP nodes or 2 if on the normal Skylake nodes
 
 GENOME="mm10"
-JOBS=4
+JOBS=2
 
 if [[ ${GENOME} == "hg38" ]]; then
   IDX="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
