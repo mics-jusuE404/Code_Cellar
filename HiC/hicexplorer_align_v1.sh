@@ -104,7 +104,7 @@ function Fq2Bam {
   ADAPTER="AGATCGGAAGAGC"
   
   cutadapt -a "${ADAPTER}" -m 18 --max-n 0.1 "${BASENAME}".fastq.gz \
-    | bowtie2 --reorder --threads 32 -x "${IDX}" -U - \
+    | bowtie2 --very-sensitive-local --reorder --threads 32 -x "${IDX}" -U - \
     | samblaster --ignoreUnmated \
     | tee >(samtools flagstat - > "${BASENAME}".flagstat) \
     | samtools view -@ 4 -o "${BASENAME}".bam
