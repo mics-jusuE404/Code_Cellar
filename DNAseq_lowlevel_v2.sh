@@ -575,6 +575,8 @@ if [[ ${ASSAY} == "ATACseq" ]]; then
   find -maxdepth 1 -name "*_filt*" -printf '%f\n' \
   | parallel "GSUB {}"
   
+  rm *unfiltered*
+  
   fi
   
 ## ChIP-seq at 5% FDR
@@ -594,6 +596,8 @@ if [[ ${ASSAY} == "ChIPseq" ]]; then
   				  
   find -maxdepth 1 -name "*_filt*" -printf '%f\n' \
   | parallel "GSUB {}"
+  
+    rm *unfiltered*
   
   fi
   
