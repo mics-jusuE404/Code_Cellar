@@ -35,20 +35,20 @@ source("findCorrelation_custom.R")
 source("findCutoff_mclustBIC.R")
 
 ## Some dummy data for testing purposes
-#Do.Test <- FALSE
-#if (Do.Test){
-#  Study = "Rasmussen"
-#  counts.atac = atac.fpm_clusters[,grep(Study, colnames(atac.fpm_clusters))]
-#  ranges.atac = atac.ranges_clusters.gr
-#  counts.rna = rna.fpkm[,grep(Study, colnames(rna.fpkm))]
-#  ranges.rna = rna.ranges
-#  TADs = tads.gr
-#  permut.cycles = 1 
-#  ExprThresh = 2
-#  Studyname = Study
-#  do.log2 = TRUE 
-#  log2.prior = 1
-#}
+Do.Test <- FALSE
+if (Do.Test){
+  Study = "Rasmussen"
+  counts.atac = atac.fpm_clusters[seq(1,10),grep(Study, colnames(atac.fpm_clusters))]
+  ranges.atac = atac.ranges_clusters.gr[seq(1,10)]
+  counts.rna = rna.fpkm[,grep(Study, colnames(rna.fpkm))]
+  ranges.rna = rna.ranges
+  TADs = tads.gr
+  permut.cycles = 1 
+  ExprThresh = 2
+  Studyname = Study
+  do.log2 = TRUE 
+  log2.prior = 1
+}
 
 ##############################################################################################################################
 
@@ -60,7 +60,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                           ranges.rna, 
                           TADs,                        ## TAD coordinates
                           permut.cycles = 1,           ## number of permutations, default no shuffling
-                          chunk.size = 4000,           ## size of chunks to split cor.test
+                          chunk.size = 10000,           ## size of chunks to split cor.test
                           ExprThresh = NULL,           ## an expression threshold for transcript/gene expression
                           ## we calculate this externally using mclust
                           FilterByGroupAverage = TRUE, ## keep only genes when the celltype average is above ExprThresh
@@ -211,10 +211,12 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
     trashy.can <- findCorrelation_custom(object = tmp.intad, 
                                          Studyname = Studyname,
                                          method = "pearson",
-                                         chunk.size = chunk.size,
+                                         chunk.size = 5,
                                          current.cycle = Q,           ## Q is the current variable from the lapply above
                                          total.cycle = permut.cycles  
-    )})
+    )
+    }
+    )
 }
 
 ## Accept args for Study name from command line:
@@ -233,6 +235,6 @@ InTAD_wrapper(counts.atac = atac.fpm_clusters[,grep(Study, colnames(atac.fpm_clu
               Studyname = Study,     ##study name to filter count matrix for
               do.log2 = TRUE, 
               log2.prior = 1,
-              chunk.size = 10000) ## careful, only got that high on the big nodes with 1.5 or 3Tb RAM!
+              chunk.size = 25000) ## careful, only got that high on the big nodes with 1.5 or 3Tb RAM!
 
 ##############################################################################################################################
