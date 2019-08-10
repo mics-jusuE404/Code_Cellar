@@ -53,6 +53,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                           ranges.rna, 
                           TADs,                        ## TAD coordinates
                           permut.cycles = 1,           ## number of permutations, default no shuffling
+                          chunk.size = 4000,           ## size of chunks to split cor.test
                           ExprThresh,                  ## an expression threshold for transcript/gene expression
                                                        ## we calculate this externally using mclust
                           FilterByGroupAverage = TRUE, ## keep only genes when the celltype average is above ExprThresh
@@ -187,7 +188,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
     trashy.can <- findCorrelation_custom(object = tmp.intad, 
                                          Studyname = Studyname,
                                          method = "pearson",
-                                         chunk.size = 1000,
+                                         chunk.size = chunk.size,
                                          current.cycle = Q,
                                          total.cycle = permut.cycles
                                          )
@@ -213,6 +214,7 @@ InTAD_wrapper(counts.atac = atac.fpm_clusters[,grep(Study, colnames(atac.fpm_clu
               ExprThresh = 2,           ## leave hardcoded for this analysis
               Studyname = Study, 
               do.log2 = TRUE, 
-              log2.prior = 1)
+              log2.prior = 1,
+              chunk.size = 4000)
 
 ##############################################################################################################################
