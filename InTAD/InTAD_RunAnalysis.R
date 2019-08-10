@@ -62,11 +62,11 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                           permut.cycles = 1,           ## number of permutations, default no shuffling
                           chunk.size = 4000,           ## size of chunks to split cor.test
                           ExprThresh = NULL,           ## an expression threshold for transcript/gene expression
-                                                       ## we calculate this externally using mclust
+                          ## we calculate this externally using mclust
                           FilterByGroupAverage = TRUE, ## keep only genes when the celltype average is above ExprThresh
-                                                       ## FALSE would be to have at least one sample above this threshold
+                          ## FALSE would be to have at least one sample above this threshold
                           Studyname,                   ## the study name of the samples to be considered
-                                                       ## necessary as the count matrices include different studies
+                          ## necessary as the count matrices include different studies
                           do.log2 = TRUE,              ## do everything on log2-transformed counts
                           log2.prior = 1){             ## prior count for log2 transformation to avoid log2(0)
   
@@ -130,15 +130,15 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
     tmp.unique.celltype <- unique(sapply(strsplit(colnames(counts.rna), split="_rep"), function(m) m[1]))
     
     keep.rna <-
-    unique(
-      unlist(
-        lapply(tmp.unique.celltype, function(U){
-          tmp.which <- grep(paste0("^",U, "_rep"), colnames(counts.rna))
-          return(as.integer(which(rowMeans(counts.rna[,tmp.which]) >= rna.cutoff)))
+      unique(
+        unlist(
+          lapply(tmp.unique.celltype, function(U){
+            tmp.which <- grep(paste0("^",U, "_rep"), colnames(counts.rna))
+            return(as.integer(which(rowMeans(counts.rna[,tmp.which]) >= rna.cutoff)))
           }
+          )
         )
       )
-    )
   }
   
   ##########
@@ -151,7 +151,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
   message(paste("[Info]: Filtering RNA-seq data with cutoff =", rna.cutoff))
   counts.rna <- counts.rna[keep.rna,]
   ranges.rna <- ranges.rna[keep.rna,]
-
+  
   ############################################################################################################################
   ########## Now run the actual InTAD analysis:
   
@@ -160,7 +160,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
     ## split the string that indicates how to combine the ATAC/RNA pairs,
     ## see the makeUniqueCombinations.R for details:
     tmp.split <- strsplit(strsplit(permut.combos[Q], split="##|@@")[[1]], split = "__")
-      
+    
     ## find the positions of the elements that are to be considered in this run in the count matrices:
     where.rna <- c()
     where.atac <- c()
@@ -190,17 +190,17 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                              countsData    = tmp.rna, 
                              geneRegions   = ranges.rna,
                              performLog = TRUE)
-                             
+    
     message("[Info]: Combining genes and signals per TAD")                  
     tmp.intad <- combineInTAD(object = tmp.intad, 
                               tadGR = TADs, 
                               selMaxTadOvlp = FALSE)
-      
+    
     ## Stop if no connections were found
     if (nrow(tmp.intad@signalConnections[[1]]) == 0){
       stop("[Error]: Did not find any valid candidate gene/enhancer pairs!")
     }
-      
+    
     ## As it turned out that the actual analysis is extremely memory-consuming for large
     ## numbers of signal/TSS combinations we will by default split it into chunks.
     ## For this we use the modified findCorrelation.R function
@@ -214,11 +214,12 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                                          chunk.size = chunk.size,
                                          current.cycle = Q,           ## Q is the current variable from the lapply above
                                          total.cycle = permut.cycles  
-                                         )})
+    )})
 }
 
 ## Accept args for Study name from command line:
 CLargs = commandArgs(trailingOnly=TRUE)
+Study  = CLargs[1]
 
 ## Now the actual command to be executed.
 ## Script itself is to be called via Rscript thisscript.R <studyname> 2> stderr.log
@@ -229,7 +230,7 @@ InTAD_wrapper(counts.atac = atac.fpm_clusters[,grep(Study, colnames(atac.fpm_clu
               TADs = tads.gr, 
               permut.cycles = CLargs[2], ## number of shufflings to perform
               ExprThresh = 2,            ## leave hardcoded for this analysis
-              Studyname = CLargs[1],     ##study name to filter count matrix for
+              Studyname = Study,     ##study name to filter count matrix for
               do.log2 = TRUE, 
               log2.prior = 1,
               chunk.size = 10000) ## careful, only got that high on the big nodes with 1.5 or 3Tb RAM!
