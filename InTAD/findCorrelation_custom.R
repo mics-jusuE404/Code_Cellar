@@ -37,8 +37,9 @@ findCorrelation_custom <- function(object,               ## InTADSig object
                                    chunk.size = 1000,    ## number of elements per chunk   
                                    method = "pearson",   ## correlation method
                                    Studyname,            ## studyname for output to disk ./InTAD_raw/InTAD_raw_Studyname_permutcycle_chunk(n).tsv
-                                   permut.cycle = NULL   ## from the lapply function that makes the permutations the current cycle
+                                   current.cycle = NULL, ## from the lapply function that makes the permutations the current cycle
                                                          ## only needed to print correct file name
+                                   total.cycle = NULL
                                    )
   {
 
@@ -101,7 +102,11 @@ findCorrelation_custom <- function(object,               ## InTADSig object
     trash.can <- lapply(X = seq(1, total.chunks),
            FUN = function(CHUNK){
              
-             message(paste("[Info]: Processing chunk", CHUNK, "of", total.chunks))
+             message(
+               paste("[Info]: Processing chunk", 
+                     CHUNK, "of", total.chunks, 
+                     "for cycle", current.cycle, "of", total.cycle)
+               )
              
              if (tmp.upper > length(allIdGnY)) tmp.upper <- length(allIdGnY)
         
@@ -124,13 +129,13 @@ findCorrelation_custom <- function(object,               ## InTADSig object
              if (CHUNK == 1) true.false <- TRUE
              if (CHUNK > 1)  true.false <- FALSE
              
-             if (is.null(permut.cycle)) permut.cycle <- 1
+             if (is.null(current.cycle)) current.cycle <- 1
              
              ## write results to avoid keeping it in memory
              if (!dir.exists("./InTAD_raw")) dir.create("./InTAD_raw")
              write.table(x = tmp.result, 
                          append = !true.false, 
-                         file = paste0("./InTAD_raw/", "InTAD_raw_", Studyname, "_permut", permut.cycle, "_chunk_", CHUNK, ".tsv"),
+                         file = paste0("./InTAD_raw/", "InTAD_raw_", Studyname, "_permut", current.cycle, "_chunk_", CHUNK, ".tsv"),
                          quote = FALSE,
                          sep = "\t",
                          row.names = FALSE,
@@ -141,5 +146,3 @@ findCorrelation_custom <- function(object,               ## InTADSig object
     )
     message("[Info]: Done processing all chunks")
 }
-
-
