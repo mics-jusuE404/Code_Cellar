@@ -188,7 +188,9 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                                          Studyname = Studyname,
                                          method = "pearson",
                                          chunk.size = 1000,
-                                         permut.cycle = Q)
+                                         current.cycle = Q,
+                                         total.cycle = permut.cycles
+                                         )
                                
     }
   ) 
