@@ -87,7 +87,7 @@ findCorrelation_custom <- function(object,               ## InTADSig object
                                 gene=allRes[[i]]$gene, name=gnname,
                                 cor=allRes[[i]]$corr,
                                 pvalue=allRes[[i]]$pvalue,
-                                eucDist = allRes[[i]]$eudis,
+                                #eucDist = allRes[[i]]$eudis,
                                 corRank=corRank,
                                 stringsAsFactors =FALSE)
       }
