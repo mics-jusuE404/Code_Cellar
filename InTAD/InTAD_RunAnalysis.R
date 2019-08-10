@@ -211,7 +211,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
     trashy.can <- findCorrelation_custom(object = tmp.intad, 
                                          Studyname = Studyname,
                                          method = "pearson",
-                                         chunk.size = 5,
+                                         chunk.size = chunk.size,
                                          current.cycle = Q,           ## Q is the current variable from the lapply above
                                          total.cycle = permut.cycles  
     )
