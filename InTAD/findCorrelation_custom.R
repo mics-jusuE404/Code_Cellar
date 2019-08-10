@@ -39,7 +39,8 @@ findCorrelation_custom <- function(object,               ## InTADSig object
                                    Studyname,            ## studyname for output to disk ./InTAD_raw/InTAD_raw_Studyname_permutcycle_chunk(n).tsv
                                    current.cycle = NULL, ## from the lapply function that makes the permutations the current cycle
                                                          ## only needed to print correct file name
-                                   total.cycle = NULL
+                                   total.cycle = NULL,
+                                   Cores = 16
                                    )
   {
 
@@ -117,7 +118,7 @@ findCorrelation_custom <- function(object,               ## InTADSig object
                                  assay.signal,
                                  assay.exprs,
                                  method,
-                                 mc.cores=detectCores()/2)
+                                 mc.cores=Cores)
               
              ## Initialize next round:
              tmp.lower <- tmp.upper + 1
