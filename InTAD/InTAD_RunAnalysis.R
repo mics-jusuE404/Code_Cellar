@@ -38,8 +38,8 @@ source("findCutoff_mclustBIC.R")
 Do.Test <- FALSE
 if (Do.Test){
   Study = "Rasmussen"
-  counts.atac = atac.fpm_clusters[seq(1,10),grep(Study, colnames(atac.fpm_clusters))]
-  ranges.atac = atac.ranges_clusters.gr[seq(1,10)]
+  counts.atac = atac.fpm_clusters[seq(1,1000),grep(Study, colnames(atac.fpm_clusters))]
+  ranges.atac = atac.ranges_clusters.gr[seq(1,1000)]
   counts.rna = rna.fpkm[,grep(Study, colnames(rna.fpkm))]
   ranges.rna = rna.ranges
   TADs = tads.gr
@@ -104,16 +104,21 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
   ##############################################################################################################################
   
   ## Estimate cutoff for non-expressed genes:
-  if (do.log2) counts.rna <- log2(counts.rna + log2.prior)
   
-  message("[Info]: Estimating RNA-seq expression cutoff")
-  rna.cutoff <- findCutoff_mclustBIC(count.matrix = counts.rna, 
-                                     do.log2 = FALSE,
-                                     plotExprDistr = FALSE)
+  if (is.null(ExprThresh)){
+    message("[Info]: Estimating RNA-seq expression cutoff")
+    rna.cutoff <- findCutoff_mclustBIC(count.matrix = counts.rna, 
+                                       do.log2 = do.log2, 
+                                       log2.prior = log2.prior,
+                                       plotExprDistr = FALSE)
   
-  rna.cutoff <- round(rna.cutoff, digits = 3)
+    rna.cutoff <- round(rna.cutoff, digits = 3)
+    supplied <- "calculated"
   
-  if (!is.numeric(rna.cutoff)) stop("Something went wrong with RNA-seq cutoff calculation!")
+    if (!is.numeric(rna.cutoff)) stop("Something went wrong with RNA-seq cutoff calculation!")
+  } else {
+    supplied <- "supplied"
+  }
   
   ##########
   ## Case 1: FilterByGroupAverage == TRUE, so filter for genes where the average group (= cell type)
@@ -148,7 +153,7 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
   }
   
   ## Filter matrix and coordiantes for selected TSS
-  message(paste("[Info]: Filtering RNA-seq data with cutoff =", rna.cutoff))
+  message(paste("[Info]: Filtering RNA-seq data with", supplied, "cutoff =", rna.cutoff))
   counts.rna <- counts.rna[keep.rna,]
   ranges.rna <- ranges.rna[keep.rna,]
   
@@ -189,13 +194,14 @@ InTAD_wrapper <- function(counts.atac,                 ## fpkm-norm. ATAC-seq co
                              signalRegions = ranges.atac, 
                              countsData    = tmp.rna, 
                              geneRegions   = ranges.rna,
-                             performLog = TRUE)
+                             performLog = do.log2,
+                             logExprsOffset = log2.prior,
+                             ncores = detectCores())
     
-    message("[Info]: Combining genes and signals per TAD")                  
+    message("[Info]: Combining genes and signals in TADs")                  
     tmp.intad <- combineInTAD(object = tmp.intad, 
-                              tadGR = TADs, 
-                              selMaxTadOvlp = FALSE)
-    
+                              tadGR = TADs)
+                              
     ## Stop if no connections were found
     if (nrow(tmp.intad@signalConnections[[1]]) == 0){
       stop("[Error]: Did not find any valid candidate gene/enhancer pairs!")
@@ -231,9 +237,9 @@ InTAD_wrapper(counts.atac = atac.fpm_clusters[,grep(Study, colnames(atac.fpm_clu
               ranges.rna = rna.ranges, 
               TADs = tads.gr, 
               permut.cycles = CLargs[2], ## number of shufflings to perform
-              ExprThresh = 2,            ## leave hardcoded for this analysis
-              Studyname = Study,     ##study name to filter count matrix for
-              do.log2 = TRUE, 
+              ExprThresh = NULL,            ## leave hardcoded for this analysis
+              Studyname = Study,         ##study name to filter count matrix for
+              do.log2 = TRUE,  
               log2.prior = 1,
               chunk.size = 25000) ## careful, only got that high on the big nodes with 1.5 or 3Tb RAM!
 
