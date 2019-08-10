@@ -33,7 +33,7 @@ findGeneCorrelation_custom <- function(x, signalVals, countVals, corMethod) {
 ## Custom function to perform correlation analysis splitted over (chunk.sizes) elements per go
 ## to reduce memory consumption
 findCorrelation_custom <- function(object,               ## InTADSig object
-                                   chunk.size = 1000,    ## number of elements per chunk   
+                                   chunk.size = 5000,    ## number of elements per chunk /default to be used on the 1.5TB node!)
                                    method = "pearson",   ## correlation method
                                    Studyname = NULL,     ## studyname for output to disk ./InTAD_raw/InTAD_raw_Studyname_permutcycle_chunk(n).tsv
                                    current.cycle = NULL, ## from the lapply function that makes the permutations the current cycle \
@@ -72,13 +72,16 @@ findCorrelation_custom <- function(object,               ## InTADSig object
             corRank <- match(allRes[[i]]$gene, rnk)
             peakName <- names(allRes)[i]
             tad <- unique(allIdGnX[[peakName]]$tad)
-            allX[[i]] <- data.frame(peakid=rep(peakName, length(gnname)),
+            tmp.x <- data.frame(peakid=rep(peakName, length(gnname)),
                                     tad=rep(tad,length(gnname)),
                                     gene=allRes[[i]]$gene, name=gnname,
                                     cor=allRes[[i]]$corr,
                                     pvalue=allRes[[i]]$pvalue,
                                     corRank=corRank,
-                                    stringsAsFactors =FALSE)})))
+                                    stringsAsFactors =FALSE)
+            return(tmp.x)
+            }
+          )))
     }
     
     ## launch the main function:
@@ -103,8 +106,6 @@ findCorrelation_custom <- function(object,               ## InTADSig object
                                   mc.cores=detectCores()/2)
               
       ## Initialize next round:
-      message("L:",tmp.lower)
-      message("U:",tmp.upper)
       tmp.lower <<- tmp.upper + 1
       tmp.upper <<- tmp.lower + chunk.size - 1
              
