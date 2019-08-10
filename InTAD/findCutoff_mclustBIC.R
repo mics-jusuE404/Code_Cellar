@@ -1,7 +1,7 @@
 ## Check for a data-driven expression cutoff in RNA-seq data.
 ## Code adapted from filterGeneExpr.R from InTAD:
 
-findCutoff_mclustBIC <- function(count.matrix, do.log2 = TRUE, log2.prior = 1, plotExprDistr = TRUE){
+findCutoff_mclustBIC <- function(count.matrix, do.log2 = TRUE, log2.prior = 1, plotExprDistr = FALSE){
   
   require(mclust)
   require(InTAD)
@@ -74,15 +74,5 @@ findCutoff_mclustBIC <- function(count.matrix, do.log2 = TRUE, log2.prior = 1, p
     cutVal <- ratiocut
     
   }
-  
-  tmp.out <- data.frame(cutVal)
-  if (do.log2) colnames(tmp.out) <- "cutoff_basedlog2"
-  if (!do.log2) colnames(tmp.out) <- "cutoff_nolog2"
-  return(tmp.out)
-  
+  return(cutVal)
 }
-  
-cutOff_Rasmussen <- findCutoff_mclustBIC(count.matrix = rna.fpkm[,grep("Rasmussen", colnames(rna.fpkm))], do.log2 = TRUE, log2.prior = 1, plotExprDistr = FALSE)  
-cutOff_ENCODE    <- findCutoff_mclustBIC(count.matrix = rna.fpkm[,grep("ENCODE", colnames(rna.fpkm))],    do.log2 = TRUE, log2.prior = 1, plotExprDistr = FALSE) 
-
-
