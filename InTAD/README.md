@@ -25,3 +25,22 @@ InTAD_RunAnalysis.R \
  That would launch analysis using 100 shufflings (permutations) for this study,
  with 36 cores per shuffle working on 4 shuffles in parallel. 
  If using the 1.5TB node go down to `--nshuffParallel 4`.
+ 
+ 
+ ## Helper scripts
+ `findCutoff_mclustBIC.R` is a script that estimates a cutoff for separating expressed from non-expressed genes/transcripts.
+ Only needs a count matrix as input, by default will perform `log2+1`. 
+ Script is modified from the `filterGeneExpr()` function of InTAD.
+ 
+ `makeUniqueCombinations.R` is a script that will take the colnames from the signals and expression objects to be used
+ in the InTAD analysis, spilling out all possible combinations (currently for up to two different cell types).
+ This is necessary as in our project we do not have "exact-match" data (so RNA-seq and ATAC-seq from the same donor)
+ but from different littermate mice. Therefore we shuffle the data and run several permutations to ensure significant
+ results are trushworthy and not a product of a lucky combination of two samples.
+
+
+## Reference
+Okonechnikov K, Erkek S, Korbel JO, Pfister SM, Chavez L (2019):
+InTAD: chromosome conformation guided analysis of enhancer target genes.” BMC bioinformatics, 20, 60. doi: 10.1186/s12859-019-2655-2
+
+https://bioconductor.org/packages/release/bioc/html/InTAD.html
