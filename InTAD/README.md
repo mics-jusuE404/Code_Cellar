@@ -3,7 +3,8 @@
 Prediction of target genes from a set of ATAC-seq peaks based on Pearson correlation between
 the peak and nearby TSS within the same TAD. Uses the InTAD framework (citation see below) from Bioconductor.
 The `InTAD_RunAnalysis.R` script is a wrapper for this analysis, with options for shuffling samples 
-and parallelization. For now it supports up to two different cell types for the analysis as this is what we had at max by now.
+and parallelization. For now it supports up to two different cell types for the shuffling-based analysis.
+Without shufflings number is unlimited.
 
 Usage of `InTAD_RunAnalysis.R` assuming to work on a 3TB RAM node:
 
