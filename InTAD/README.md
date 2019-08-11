@@ -1,6 +1,11 @@
 ## Scripts to run InTAD analysis
 
-Usage of `InTAD_RunAnalysis.R` assuming to work on a 3TB RAM node with 144 cores:
+Prediction of target genes from a set of ATAC-seq peaks based on Pearson correlation between
+the peak and nearby TSS within the same TAD. Uses the InTAD framework (citation see below) from Bioconductor.
+The `InTAD_RunAnalysis.R` script is a wrapper for this analysis, with options for shuffling samples 
+and parallelization.
+
+Usage of `InTAD_RunAnalysis.R` assuming to work on a 3TB RAM node:
 
 ```bash
 #!/bin/bash
