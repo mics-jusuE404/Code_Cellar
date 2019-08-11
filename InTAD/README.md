@@ -29,10 +29,8 @@ InTAD_RunAnalysis.R \
 --rdata 190807_InTAD_PreparedData.Rdata
 ```
 That would launch analysis using 100 shufflings (permutations) for this study,
-with 36 cores per shuffle working on 4 shuffles in parallel. 
-A run with ~600.000 analysis pairs it will very roughly need 1.5Tb, sometimes less, sometimes much more,
-so do not run more than 4 jobs in parallel on the 3Tb node to avoid memory shortages.
-If using the 1.5TB node go down to `--nshuffParallel 2` at max.
+with 36 cores per shuffle working on 2 shuffles in parallel. 
+If using the 1.5TB node go down to `--nshuffParallel 1` at max, just to be safe.
  
  
  ## Helper scripts
