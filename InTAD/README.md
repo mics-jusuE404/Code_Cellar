@@ -21,3 +21,7 @@ InTAD_RunAnalysis.R \
 --nshuff 100 \
 --nshuffParallel 4 \
 --rdata 190807_InTAD_PreparedData.Rdata
+```
+ That would launch analysis using 100 shufflings (permutations) for this study,
+ with 36 cores per shuffle working on 4 shuffles in parallel. 
+ If using the 1.5TB node go down to `--nshuffParallel 4`.
