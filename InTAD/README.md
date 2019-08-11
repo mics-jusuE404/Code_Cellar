@@ -3,7 +3,7 @@
 Prediction of target genes from a set of ATAC-seq peaks based on Pearson correlation between
 the peak and nearby TSS within the same TAD. Uses the InTAD framework (citation see below) from Bioconductor.
 The `InTAD_RunAnalysis.R` script is a wrapper for this analysis, with options for shuffling samples 
-and parallelization.
+and parallelization. For now it supports up to two different cell types for the analysis as this is what we had at max by now.
 
 Usage of `InTAD_RunAnalysis.R` assuming to work on a 3TB RAM node:
 
@@ -27,15 +27,19 @@ InTAD_RunAnalysis.R \
 --nshuffParallel 4 \
 --rdata 190807_InTAD_PreparedData.Rdata
 ```
- That would launch analysis using 100 shufflings (permutations) for this study,
- with 36 cores per shuffle working on 4 shuffles in parallel. 
- If using the 1.5TB node go down to `--nshuffParallel 4`.
+That would launch analysis using 100 shufflings (permutations) for this study,
+with 36 cores per shuffle working on 4 shuffles in parallel. 
+A run with ~600.000 analysis pairs it will very roughly need 1.5Tb, sometimes less, sometimes much more,
+so do not run more than 4 jobs in parallel on the 3Tb node to avoid memory shortages.
+If using the 1.5TB node go down to `--nshuffParallel 2` at max.
  
  
  ## Helper scripts
  `findCutoff_mclustBIC.R` is a script that estimates a cutoff for separating expressed from non-expressed genes/transcripts.
  Only needs a count matrix as input, by default will perform `log2+1`. 
- Script is modified from the `filterGeneExpr()` function of InTAD.
+ Script is modified from the `filterGeneExpr()` function of InTAD. 
+ By default the `InTAD_RunAnalysis.R` will than only keep transcripts for which at least one group of cells has 
+ a group-avagare above this threshold. 
  
  `makeUniqueCombinations.R` is a script that will take the colnames from the signals and expression objects to be used
  in the InTAD analysis, spilling out all possible combinations (currently for up to two different cell types).
