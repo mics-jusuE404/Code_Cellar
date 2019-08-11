@@ -36,8 +36,9 @@ for (i in packageS){
 ## required helper function:
 source("makeUniqueCombinations.R")
 source("findCutoff_mclustBIC.R")
+source("findCorrelation_custom.R")
 
-list.sources <- c("makeUniqueCombinations", "findCutoff_mclustBIC")
+list.sources <- c("makeUniqueCombinations", "findCutoff_mclustBIC", "findCorrelation_custom")
 
 if ( sum(grepl(paste(paste0("^", list.sources, "$"), collapse = "|"), ls())) 
      !=
@@ -68,7 +69,7 @@ option_list = list(
   
   make_option(c("--outdir"), action="store", default="./InTAD_results", type="character",
               help="The directory to store results in, default is ./InTAD_results")  
-
+  
 ); opt = parse_args(OptionParser(option_list=option_list))
 
 arg.mis <- c()
@@ -227,7 +228,7 @@ be.quiet <- mclapply(seq(1, Shuffs), mc.cores = nshuffParallel, function(SHUFF){
   InSigTad <- combineInTAD(object = InSigTad, tadGR = tads.gr, selMaxTadOvlp = FALSE)
   
   ## results w/o qvalues, this will be done later as we might want to filter out some things before
-  corRes   <- findCorrelation(object = InSigTad, method = "pearson", adj.pval = FALSE, plot.proportions = FALSE)
+  corRes   <- findCorrelation_custom(object = InSigTad, method = "pearson", adj.pval = FALSE, plot.proportions = FALSE)
   
   ## write results to disk:
   write.table(corRes, file = paste0(Outdir,
@@ -238,5 +239,5 @@ be.quiet <- mclapply(seq(1, Shuffs), mc.cores = nshuffParallel, function(SHUFF){
                                     ".tsv"),
               col.names = T, row.names = F, sep="\t", quote = F)
   
-  }
+}
 ) ## end mclapply
