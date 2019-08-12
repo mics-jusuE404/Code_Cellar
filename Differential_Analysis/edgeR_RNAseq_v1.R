@@ -4,12 +4,13 @@
 salmon2edgeR <- function(Basename,                   ## Prefix for all elements saved to disk/envir
                          SalmonDir,                  ## the path to the folder with the salmon quantifications
                          WorkingDir = "./",          ## default working directory
-                         Tx2Gene = NULL,             ## the tab-delim list with transcript2gene conversions
-                         FilterSmallRNAs = TRUE,     ## remove from tximport all smallRNAs as these are typically not well-captured
-                         SmallRNAFile = NULL,        ## the file that contains the genes to filter out
+                         Tx2Gene,                    ## the tab-delim list with transcript2gene conversions
+                         FilterSmallRNAs = TRUE ,    ## remove from tximport all smallRNAs as these are typically not well-captured
+                         SmallRNAFile,               ## the file that contains the genes to filter out
                          Save.RawDGElist = FALSE,    ## if TRUE saves the DGElist prior to all FilterByExpr etc
                          MakeMAplots = "groupwise",  ## one of c("all", "groupwise", "none") for explaroatory MA-plots
                          MakePCAplot = TRUE,         ## guess what
+                         nPCAgenes = 1000,           ## the number of genes to select for PCA
                          Return.tximport = F,        ## whether to save the tximport result to envir
                          Coldata = NULL,             ## Coldata for differential expression
                          Design = NULL,              ## design for edgeR
@@ -104,14 +105,10 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   ####################################################################################################################################################
   
   ## Use the default tx2gene (mm10, gencode) list if not specified explicitely:
-  if (is.null(Tx2Gene)) {
-    TX2Gene <- fread("/Volumes/Rumpelkammer/Genomes/mm10/Gencode_M20/gencode.vM20.Tx2Gene.txt", header = T, data.table = F)
-  }
+  TX2Gene <- fread(Tx2Gene, header = F, data.table = F, sep = "\t")
   
-  ## Use the default filtering file list if not specified explicitely:
-  if (is.null(SmallRNAFile)) {
-    SmallRNAFile <- fread("/Volumes/Rumpelkammer/Genomes/mm10/Gencode_M20/Filtered_Files/gene_name_smallRNA_TEC.txt", header = F, data.table = F)
-  }
+  SmallRNAFile <- fread(SmallRNAFile, header = F, data.table = F, sep = "\t")
+  
   
   ## List quantification files:
   tmp.files <- list.files(path = list.dirs(path = SalmonDir, recursive=FALSE, full.names = T), 
@@ -153,7 +150,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     message("Removing smallRNAs is set to FALSE")
   }
   
-  if (Return.tximport == T) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
+  if (Return.tximport == TRUE) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
   
   ####################################################################################################################################################
   
@@ -203,7 +200,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     se.deseq2 <- DESeqTransform(se.deseq2)
     
     pdf(paper = "a4", file = paste(WorkingDir, "/Plots/", GetDate(), "_", Basename, "_PCA_top2k.pdf", sep=""))
-    print(plotPCA(object = se.deseq2, intgroup="groups", 1000))
+    print(DESeq2::plotPCA(object = se.deseq2, intgroup="groups", nPCAgenes))
     dev.off()
     
   }
