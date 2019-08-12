@@ -11,14 +11,6 @@ Blacklist="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
 if [[ ! -e ./GenrichDir ]]; then
   mkdir GenrichDir; fi
 
-## SE or PE:
-MODE=$1
-
-if [[ $MODE != "SE" ]] && [[ $MODE != "PE" ]]; then
-  echo '[Error]:' $1 'either SE or PE'
-  exit 1
-  fi
-
 ########################################################################################################################
 
 ## Genrich for groups:
@@ -50,22 +42,27 @@ function GENRICHGROUP {
 ########################################################################################################################
 
 ## Genrich for individual samples:
-#function GENRICHSINGLE {
+function GENRICHSINGLE {
   
-#  BASENAME=$1
-#  MODE=$3
+  BASENAME=$1
+  MODE=$3
   
-#  if [[ ${MODE} == "PE" ]]; then
-#    Genrich -E $2 -t ${BASENAME}_dedup.bam -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
-#    fi
+  if [[ ${MODE} == "PE" ]]; then
+    ls ${BASENAME}*dedup.bam | parallel "samtools sort -n -@ 3 -m 1G -o ./GenrichDir/{} {}"
+    cd GenrichDir
+    Genrich -E $2 -t ${BASENAME}_dedup.bam -j -l 200 -q 0.05 -o ${BASENAME}_peaks.narrowPeak
+    fi
     
-#  if [[ ${MODE} == "SE" ]]; then  
-#    Genrich -E $2 -t ${BASENAME}_dedup.bam -y -j -l 200 -q 0.01 -o ${BASENAME}_genrich_FDR1perc.narrowPeak
-#    fi
+  if [[ ${MODE} == "SE" ]]; then  
+    Genrich -S -E $2 -t ${BASENAME}_dedup.bam -w 100 -j -l 200 -q 0.05 -o ./GenrichDir/${BASENAME}_peaks.narrowPeak
+    fi
   
-#}; export -f GENRICHSINGLE
+}; export -f GENRICHSINGLE
 
 ########################################################################################################################
 
-ls *_dedup.bam | awk -F "_rep" '{print $1 | "sort -u"}' | parallel "GENRICHGROUP {} $Blacklist $MODE 2> {}_genrich.log"
+## Example for single-sample in PE mode:
+ls *_dedup.bam \
+  | awk -F "_dedup.bam" '{print $1 | "sort -u"}' \
+  | parallel "GENRICHSINGLE {} $Blacklist PE 2> {}_genrich.log"
 
