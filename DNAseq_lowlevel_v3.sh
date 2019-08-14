@@ -55,7 +55,7 @@ done
 	
 ## Call getopts to assign the arguments to variables for use in the script:
 
-while getopts cmd:g:a:j:s:t: OPT         # args followed by ":" expect an argument
+while getopts cmdag:j:s:t: OPT         # args followed by ":" expect an argument
   do   
   case ${OPT} in                            # Letters followed by a ":" are expecting an argument.
     g) Genome="${OPTARG}"    ;;
