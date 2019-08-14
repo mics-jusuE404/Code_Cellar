@@ -14,7 +14,6 @@ usage(){
                                   Use -b not --bam as --bam has a yet-unsolved bug!
             -a | --atacseq      : Set to trigger ATAC-seq mode (=counting cutting sites)           [FALSE]
             -s | --pairedend    : Set to count fragments instead of reads                          [FALSE]
-            -c | --cutsites     : Make bigwig based on cutting sites (5p. end of read)             [FALSE]
             -e | --extend       : Number of bp to extend reads to fragments.                       [0]                                        
             -p | --peaks        : Reference peak list to create the count matrix from              [no default]
             -m | --mean         : If set perform averaging of replicates                   
@@ -35,7 +34,6 @@ ATACseq="FALSE"
 PairedEnd="FALSE"
 Extend="FALSE"
 Mean="FALSE"
-CutSites="FALSE"
 WiggleTools="$HOME/anaconda3_things/anaconda3/envs/wiggle/bin/wiggletools"
 Rscript="$HOME/anaconda3_things/anaconda3/envs/R_env/bin/Rscript"
 Jobs=4
@@ -56,14 +54,13 @@ for arg in "$@"; do                         # for every arg in the commandline a
    "--rscript")   set -- "$@" "-r"   ;;   #
    "--jobs")      set -- "$@" "-j"   ;;   #
    "--threads")   set -- "$@" "-t"   ;;   #
-   "--cutsites")  set -- "$@" "-c"   ;;   #
    *)             set -- "$@" "$arg" ;;   # 
  esac
 done
 
 #############################################################################################################################################
 
-while getopts casmb:e:p:w:e:j:t: OPT       
+while getopts asmb:e:p:w:e:j:t: OPT       
   do   
   case ${OPT} in                       
     b) BAMS="${OPTARG}"          ;;
@@ -208,30 +205,7 @@ function BiggyWiggy {
   Out=$(echo ${BAM} | awk '{gsub("_dedup.bam", "_TMM.bigwig");print}')
   Threads=${2}
   Extend=${3}
-  OffSet=${4}
-  PairedEnd=${5}
-  
-  ## No extension of reads:
-  if [[ $Extend == "FALSE" ]]; then 
-    Extend=""
-  fi
-  
-  ## Extension of reads to frags if paired-end data using TLEN:
-  if [[ $Extend == "TRUE" ]] && [[ $PairedEnd == "TRUE" ]]; then
-    Extend="-e"
-  fi
-  
-  ## Extension of single end reads do user-defined frag. length
-  if [[ $Extend == "TRUE" ]] && [[ $PairedEnd == "FALSE" ]]; then
-    Extend="-e "${3}
-  fi
-  
-  ## Optional counting 5' ends for ATAC-seq, shifted by +4
-  if [[ OffSet == "FALSE" ]]; then 
-    OffSet=""
-  else
-    OffSet="--Offset 4"
-  fi
+  PairedEnd=${4}
   
   ## if no file, quit
   if [[ ! -e $BAM ]]; then
@@ -245,14 +219,19 @@ function BiggyWiggy {
     samtools index -@ ${Threads} ${BAM}
   fi
   
-  ## Get the scaling factor for the respective sample from TMMfactors.txt.
-  ## ! Careful, the TMM itself is intended for division but --scaleFactor in bamCoverage multiplies,
-  ##   so we have to do SF^(-1) first using bc (basic calculator):
   SF=$(bc <<< "scale=10; $(grep "${BAM}" TMMfactors.txt | cut -f2)^-1")
+    
+  Basic="bamCoverage --bam ${BAM} -o ${Out} -p ${Threads} -bs 1 --scaleFactor ${SF}"
   
-  ## bigwig (optional extension from reads to fragments)
-  bamCoverage --bam ${BAM} -o ${Out} -p ${Threads} -bs 1 ${Extend} --scaleFactor ${SF} ${OffSet} \
-    2> ${BAM%.bam}_bamCoverage.log
+  ## Extension of reads to frags if paired-end data using TLEN:
+  if [[ $Extend != "FALSE" ]] && [[ $PairedEnd == "TRUE" ]]; then
+    eval "${Basic}" -e --Offset 4 2> ${BAM%.bam}_bamCoverage.log
+  fi
+  
+  ## Extension of single end reads do user-defined frag. length
+  if [[ $Extend != "FALSE" ]] && [[ $PairedEnd == "FALSE" ]]; then
+    eval "${Basic}" -e ${Extend} 2> ${BAM%.bam}_bamCoverage.log
+  fi   
   
 }; export -f BiggyWiggy
 
