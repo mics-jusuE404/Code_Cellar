@@ -4,7 +4,7 @@
 ## Script will treat all *_dedup.bam as belonging to the same experiment and will feed them to TMM.
 
 usage(){
-echo '
+>&2 echo '
 ---------------------------------------------------------------------------------------------------------------------
 
 ---- Bigwig creation, normalization and optional averaging starting from BAM files.
@@ -24,7 +24,7 @@ echo '
             -t | --threads      : Number of threads for bamCoverage                                [16]       
             
 ---------------------------------------------------------------------------------------------------------------------
-'
+' 
 }; if [[ -z "$1" ]] || [[ $1 == -h ]] || [[ $1 == --help ]]; then usage; exit; fi
 
 #############################################################################################################################################
@@ -79,23 +79,23 @@ while getopts casmb:e:p:w:e:j:t: OPT
     t) Threads="${OPTARG}"       ;;
   esac
 done	
-echo $BAMS
+
 ## Summary:
-echo ''
-echo '---------------------------------------------------------------------------------------------'
-echo '[Info] Running with these parameters:'
-echo '       --bams      = ' ${BAMS}
-echo '       --atacseq   = ' "${ATACseq}"
-echo '       --pairedend = ' "${PairedEnd}"
-echo '       --extend    = ' "${Extend}"
-echo '       --peaks     = ' "${Peaks}"
-echo '       --mean      = ' "${Mean}"
-echo '       --wiggle    = ' "${WiggleTools}"
-echo '       --rscript   = ' "${Rscript}"
-echo '       --jobs      = ' "${Jobs}"
-echo '       --threads   = ' "${Threads}"
-echo '---------------------------------------------------------------------------------------------'
-echo ''
+>&2 echo ''
+>&2 echo '---------------------------------------------------------------------------------------------'
+>&2 echo '[Info] Running with these parameters:'
+>&2 echo '       --bams      = ' ${BAMS}
+>&2 echo '       --atacseq   = ' "${ATACseq}"
+>&2 echo '       --pairedend = ' "${PairedEnd}"
+>&2 echo '       --extend    = ' "${Extend}"
+>&2 echo '       --peaks     = ' "${Peaks}"
+>&2 echo '       --mean      = ' "${Mean}"
+>&2 echo '       --wiggle    = ' "${WiggleTools}"
+>&2 echo '       --rscript   = ' "${Rscript}"
+>&2 echo '       --jobs      = ' "${Jobs}"
+>&2 echo '       --threads   = ' "${Threads}"
+>&2 echo '---------------------------------------------------------------------------------------------'
+>&2 echo ''
 
 #############################################################################################################################################
 
