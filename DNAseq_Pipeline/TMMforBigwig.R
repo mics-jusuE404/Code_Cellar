@@ -10,8 +10,8 @@ if (length(grep("FALSE", (packageS %in% rownames(installed.packages())))) > 0){
   stop("Package(s): ", packageS[which( packageS %in% rownames(installed.packages()) == "FALSE")], " are not installed!")
 }
 
-library(DESeq2)
-library(data.table)
+suppressPackageStartupMessages(require(edgeR))
+suppressPackageStartupMessages(require(data.table))
 
 ## read data:
 raw.counts <- fread('cat /dev/stdin', skip = 1, header = T, data.table = F)
