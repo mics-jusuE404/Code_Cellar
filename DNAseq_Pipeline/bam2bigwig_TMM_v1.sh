@@ -276,8 +276,9 @@ function BiggyAverage {
 
 (>&2 paste -d " " <(echo '[Info]' 'Averaging bigwigs across replicates'))
 
-if [[ ! -e tmp_chromSizes.txt ]]; then
-  ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
-fi
-
-ls *rep*_TMM.bigwig | awk -F "_rep" '{print $1 | "sort -u"}' | parallel -j 8 "BiggyAverage {} ${WiggleTools}"
+if [[ $Mean == "TRUE" ]]; then
+  if [[ ! -e tmp_chromSizes.txt ]]; then
+    ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
+  fi
+  ls *rep*_TMM.bigwig | awk -F "_rep" '{print $1 | "sort -u"}' | parallel -j 8 "BiggyAverage {} ${WiggleTools}"
+fi  
