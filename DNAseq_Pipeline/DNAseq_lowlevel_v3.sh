@@ -287,24 +287,24 @@ function Fq2Bam {
                  | tee >(samtools index - "${Basename}"_dup.bam.bai)"
      
   ## Cat commands together:            	
-  if [[ ${ATACseq} == "FALSE" ]]; then
-    eval "${GENERALFILTER}" \
-    | sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o ${Basename}_dedup.bam /dev/stdin
-    fi
+  #if [[ ${ATACseq} == "FALSE" ]]; then
+  eval "${GENERALFILTER}" \
+  | sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o ${Basename}_dedup.bam /dev/stdin
+    #fi
   
-  if [[ ${ATACseq} == "TRUE" ]]; then
+  #if [[ ${ATACseq} == "TRUE" ]]; then
   
-    eval "${GENERALFILTER}" \
-    | sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin \
-    | tee >(tee "${Basename}"_dedup.bam | samtools index - "${Basename}"_dedup.bam.bai) \
-    | bedtools bamtobed -i - \
-    | mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' \
-    | sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 \
-    | tee >(bgzip -@ 6 > "${Basename}"_cutsites.bed.gz) \
-    | bedtools genomecov -bg -i - -g tmp_chromSizes.txt \
-    | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${Basename}"_cutsites.bigwig
+    #eval "${GENERALFILTER}" \
+    #| sambamba view -l 5 -f bam -t 8 --num-filter=/1024 -o /dev/stdout /dev/stdin \
+    #| tee >(tee "${Basename}"_dedup.bam | samtools index - "${Basename}"_dedup.bam.bai) \
+    #| bedtools bamtobed -i - \
+    #| mawk 'OFS="\t" {if ($6 == "+") print $1, $2+4, $2+5, ".", ".", $6} {if ($6 == "-") print $1, $3-5, $3-4, ".", ".", $6}' \
+    #| sort -k1,1 -k2,2n -k3,3n -k6,6 -S10G --parallel=10 \
+    #| tee >(bgzip -@ 6 > "${Basename}"_cutsites.bed.gz) \
+    #| bedtools genomecov -bg -i - -g tmp_chromSizes.txt \
+    #| bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${Basename}"_cutsites.bigwig
     
-  fi
+  #fi
   
   BamCheck "${Basename}"_dup.bam
   BamCheck "${Basename}"_dedup.bam
