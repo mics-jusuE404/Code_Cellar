@@ -33,7 +33,7 @@ echo '
 '
 }; if [[ -z "$1" ]] || [[ $1 == -h ]] || [[ $1 == --help ]]; then usage; exit; fi
 	
-#########################################################################################################
+#################################################################################################################################################
 
 ## Thanks to jrjhealey for the template
 ## https://github.com/jrjhealey/BadassBash/blob/master/BadassBash.sh#L50
@@ -69,7 +69,7 @@ while getopts cmd:g:a:j:s:t: OPT         # args followed by ":" expect an argume
   esac
 done	
 
-#########################################################################################################
+#################################################################################################################################################
 
 ## Check for args, set defaults if empty:
 if [[ "${ATACseq}" != "TRUE" ]]; then ATACseq="FALSE"; fi
@@ -88,7 +88,7 @@ if [[ ${AlnOnly} != "TRUE" ]]; then AlnOnly="FALSE"; fi
 if [[ ${AlnOnly} == "TRUE" ]]; then 
   DoMacs="FALSE"; fi
   
-#########################################################################################################
+#################################################################################################################################################
 
 ## Return summary:
 
@@ -106,7 +106,7 @@ echo '       --alnOnly  = '"${AlnOnly}"
 echo '---------------------------------------------------------------------------------------------'
 echo ''
 
-#########################################################################################################	
+#################################################################################################################################################
 	
 if [[ ${Genome} == "hg38" ]]; then
   Idx="/scratch/tmp/a_toen03/Genomes/hg38/bowtie2_index_noALT_withDecoy/hg38_noALT_withDecoy.fa"
@@ -118,7 +118,7 @@ if [[ ${Genome} == "mm10" ]]; then
   BLACKLIST="/scratch/tmp/a_toen03/Genomes/mm10/mm10_consensusBL.bed"
   fi  
   
-#########################################################################################################  
+#################################################################################################################################################
 
 ## Check if required tools are in PATH and/or callable:
 
@@ -146,14 +146,14 @@ for i in $(echo ${TOOLS[*]}); do
 if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0 ]]; then
   echo '[ERROR] Tools missing in PATH -- see missing_tools.txt' && exit 1; fi
 
-#########################################################################################################  
+#################################################################################################################################################
 
 ## Exit function if BAM file looks corrupted or is missing after a step:
 function ExitBam {
   (>&2 echo '[ERROR]' "${1}" 'looks suspicious or is empty -- exiting') && exit 1
 }; export -f ExitBam
 
-#########################################################################################################  
+#################################################################################################################################################
 
 ## Check if BAM is corrupted or empty:
 function BamCheck {
@@ -167,7 +167,7 @@ function BamCheck {
   
 }; export -f BamCheck  
 
-#########################################################################################################  
+#################################################################################################################################################
 
 ## Function to get the % of reads mapped to chrM:
 function mtDNA {
@@ -184,7 +184,7 @@ function mtDNA {
   
 }; export -f mtDNA
 
-#########################################################################################################  
+#################################################################################################################################################
 
 ## Alignment /filtering function:
 
@@ -196,7 +196,7 @@ function Fq2Bam {
   ATACseq="${4}"
   Threads="${5}"
 	
-  ####################################################################################################### 
+#################################################################################################################################################
   
   ## default adapter types
   if [[ ${ATACseq} == "TRUE" ]]
@@ -224,7 +224,7 @@ function Fq2Bam {
   CUT_PCR="samtools fastq -n -@ 2 "${Basename}"_ucram.cram \
             | cutadapt -j 1 -a "${ADAPTER}" -A "${ADAPTER}" --interleaved -m 18 --max-n 0.1 -"          
   
-  #############################################################################################################          
+#################################################################################################################################################
   
   ## Bowtie2 basic commands depending on $TYPE, reading from stdin:
   
@@ -233,7 +233,7 @@ function Fq2Bam {
 
   BOWTIE2SE="bowtie2 --very-sensitive --threads ${Threads} --rg-id "${Basename}" -x "${Idx}" -U -"             
 	
-  #############################################################################################################
+#################################################################################################################################################
   
   ## Check mode and set concat command accordingly:
   
@@ -304,18 +304,18 @@ function Fq2Bam {
     | bedtools genomecov -bg -i - -g tmp_chromSizes.txt \
     | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o "${Basename}"_cutsites.bigwig
     
-    BamCheck "${Basename}"_dup.bam
-    BamCheck "${Basename}"_dedup.bam
+  fi
+  
+  BamCheck "${Basename}"_dup.bam
+  BamCheck "${Basename}"_dedup.bam
     
-    if [[ $(echo ${Inputtype} | grep '_paired') ]]; then
-      picard CollectInsertSizeMetrics \
-        I="${Basename}"_dedup.bam \
-        O="${Basename}"_InsertSizes.txt \
-        H="${Basename}"_InsertSizes.pdf \
-        QUIET=true VERBOSITY=ERROR VALIDATION_STRINGENCY=LENIENT 2> /dev/null
-    fi
-        
-    fi
+  if [[ $(echo ${Inputtype} | grep '_paired') ]]; then
+    picard CollectInsertSizeMetrics \
+    I="${Basename}"_dedup.bam \
+    O="${Basename}"_InsertSizes.txt \
+    H="${Basename}"_InsertSizes.pdf \
+    QUIET=true VERBOSITY=ERROR VALIDATION_STRINGENCY=LENIENT 2> /dev/null
+  fi
   
   ## Flagstat that I couldn't squeeze into the tee part above:
   tmpthread=$(bc <<< "${Threads}/2")
@@ -328,11 +328,11 @@ function Fq2Bam {
 
 export -f Fq2Bam
 
-#############################################################################################################
+#################################################################################################################################################
 
 ##
 
-#############################################################################################################
+#################################################################################################################################################
 
 ## Run Fq2Bam:
 
@@ -362,14 +362,14 @@ echo "${FileDefine}" \
   | tr " " "\n" \
   | parallel -j "${Jobs}" "Fq2Bam {} ${Inputtype} ${Idx} ${ATACseq} ${Threads} 2> {}.log"
 
-#############################################################################################################
+#################################################################################################################################################
 
 ## fastqc of raw output:
 echo "${FileDefine}" \
   | tr " " "\n" \
   | parallel -j "$(nproc)" "fastqc {}_raw.bam"
 
-#############################################################################################################
+#################################################################################################################################################
 
 ## Call peaks with macs:
 
@@ -404,11 +404,16 @@ if [[ ${DoMacs} == "TRUE" ]]; then
       echo "[Error]: No input files found for peak calling"
       exit 1
     fi
+    
+    if [[ $(echo $Inputtype | grep '_paired') ]]; then
+      BAM="BAMPE"
+    else
+      BAM="BAM"
+    fi  
   
     ls *_dedup.bam \
-      | awk -F "_dedup.bam" '{print $1 | "sort u"}' \
-      | parallel "$MACS callpeak -t {}_dedup.bam -n {} -g $GFLAG \
-                  --keep-dup=all 2>> {}.log"
+      | awk -F "_dedup.bam" '{print $1 | "sort -u"}' \
+      | parallel "$MACS callpeak -t {}_dedup.bam -n {} -g $GFLAG --keep-dup=all -f ${BAM} 2>> {}.log"
               
   fi
   
@@ -449,7 +454,7 @@ if [[ ${DoMacs} == "TRUE" ]]; then
   
 fi
   
-#############################################################################################################  
+#################################################################################################################################################  
   
 ## Summary report:
 multiqc -o multiqc_all ./ 
