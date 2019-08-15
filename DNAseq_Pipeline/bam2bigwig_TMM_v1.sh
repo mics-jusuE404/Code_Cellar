@@ -231,13 +231,17 @@ function BiggyWiggy {
   ## Extension of single end reads do user-defined frag. length
   if [[ $Extend != "FALSE" ]] && [[ $PairedEnd == "FALSE" ]]; then
     eval "${Basic}" -e ${Extend} 2> ${BAM%.bam}_bamCoverage.log
-  fi   
+  fi
+  
+  if [[ $Extend == "FALSE" ]]; then
+    eval "${Basic}" 2> ${BAM%.bam}_bamCoverage.log
+  fi  
   
 }; export -f BiggyWiggy
 
 (>&2 paste -d " " <(echo '[Info]' 'Creating bigwigs for each sample'))
 
-ls *_dedup.bam | parallel -j "${Jobs}" "BiggyWiggy {} ${Threads} ${Extend} ${CutSites} ${PairedEnd}"
+ls *_dedup.bam | parallel -j "${Jobs}" "BiggyWiggy {} ${Threads} ${Extend} ${PairedEnd}"
 
 #############################################################################################################################################
 
