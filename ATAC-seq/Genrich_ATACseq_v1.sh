@@ -28,7 +28,7 @@ function GENRICHGROUP {
   FILES=$(ls ${BASENAME}*dedup.bam | xargs | awk '{gsub(" ", ",");print}')
   
   if [[ ${MODE} == "PE" ]]; then
-    ls ${BASENAME}*dedup.bam | parallel "samtools sort -n -@ 4 -m 1G -o ./GenrichDir/{} {}"
+    ls ${BASENAME}*dedup.bam | parallel -j 16 "samtools sort -n -@ 4 -m 1G -o ./GenrichDir/{} {}"
     cd GenrichDir
     Genrich -E $2 -t $FILES -j -l 200 -q 0.01 -o ${BASENAME}_peaks.narrowPeak
     fi
@@ -63,6 +63,6 @@ function GENRICHSINGLE {
 
 ## Example for single-sample in PE mode:
 ls *_dedup.bam \
-  | awk -F "_dedup.bam" '{print $1 | "sort -u"}' \
-  | parallel "GENRICHSINGLE {} $Blacklist PE 2> {}_genrich.log"
+  | awk -F "_rep" '{print $1 | "sort -u"}' \
+  | parallel "GENRICHGROUP {} $Blacklist PE 2> {}_genrich.log"
 
