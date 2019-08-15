@@ -187,6 +187,9 @@ featureCounts -a "${Peaks}".saf -F SAF ${paired} -o "${Peaks}".saf.countmatrix -
 ## feed to edgeR and obtain effetive normalization factors:
 (>&2 paste -d " " <(echo '[Info]' 'Calculating TMM factors'))
 
+## if a TMMfactors.txt already exist, move it to other name:
+if [[ -e TMMfactors.txt ]]; then mv TMMfactors.txt TMMfactors_existing.txt; fi
+
 if [[ -e "${Peaks}".saf.countmatrix ]] && [[ $(head "${Peaks}".saf.countmatrix | wc -l | xargs) > 0 ]]; then
   cat "${Peaks}".saf.countmatrix | ${Rscript} calculateTMM.R
 fi
