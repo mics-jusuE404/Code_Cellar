@@ -237,8 +237,7 @@ function BiggyWiggy {
   ## extract size factor and get reciprocal:
   SF=$(bc <<< "scale=10; $(grep "${BAM}" TMMfactors.txt | cut -f2)^-1")
     
-  if [[ "ATACseq" == FALSE ]]; then
-  
+  if [[ $ATACseq == "FALSE" ]]; then
     ## if no index, do index =)  
     if [[ ! -e ${BAM}.bai ]]; then
       (>&2 paste -d " " <(echo '[Info]' 'Indexing' $BAM 'as no index found'))
@@ -247,7 +246,6 @@ function BiggyWiggy {
   
     ## the basic command for bamCoverage:
     Basic="bamCoverage --bam ${BAM} -o ${Out} -p ${Threads} -bs 1 --scaleFactor ${SF}"
-  
     ## Extension of reads to fragmentss if paired-end data using TLEN:
     if [[ $PairedEnd == "TRUE" ]]; then
       eval "${Basic}" -e 2> ${BAM%.bam}_bamCoverage.log
@@ -282,6 +280,8 @@ function BiggyWiggy {
 (>&2 paste -d " " <(echo '[Info]' 'Creating bigwigs for each sample'))
 
 ls *_dedup.bam | parallel -j "${Jobs}" "BiggyWiggy {}"
+
+(>&2 paste -d " " <(echo '[Info]' 'Done creating bigwigs for each sample'))
 
 #############################################################################################################################################
 
