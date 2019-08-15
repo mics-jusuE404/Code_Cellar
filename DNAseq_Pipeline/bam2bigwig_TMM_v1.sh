@@ -190,9 +190,16 @@ awk 'OFS="\t" {print $1"_"$2+1"_"$3, $1, $2+1, $3, "+"}' "${Peaks}" > "${Peaks}"
 ## Countmatrix:
 (>&2 paste -d " " <(echo '[Info]' 'Creating count matrix'))
 
-if [[ $PairedEnd == "TRUE" ]]; then paired="-p"; fi
+fcBasic="featureCounts -a ${Peaks}.saf -F SAF -o ${Peaks}.saf.countmatrix -T ${Threads}"
 
-featureCounts -a "${Peaks}".saf -F SAF ${paired} -o "${Peaks}".saf.countmatrix -T ${Threads} ${BAMS} 2> "${Peaks}".saf.countmatrix.log
+## customize featureCounts based on assay and sequencing type:
+if [[ $ATACseq == "TRUE" ]]; then
+  eval "${fcBasic}" --read2pos 5 ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+elif [[ $PairedEnd == "TRUE" ]]; then
+  eval "${fcBasic}" -p ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+else
+  eval "${fcBasic}" ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+fi  
 
 ## feed to edgeR and obtain effetive normalization factors:
 (>&2 paste -d " " <(echo '[Info]' 'Calculating TMM factors'))
@@ -260,12 +267,14 @@ function BiggyWiggy {
   
   ## ATAC-seq mode, reduce reads to cutting site shifted by +4/-5 using awk:
   if [[ $ATACseq == "TRUE" ]]; then
+  
     bedtools bamtobed -i ${BAM} \
     | mawk 'OFS="\t"{if($6 == "+")print $1,$2+4,$2+5,".",".",$6}{if($6 == "-")print$1,$3-5,$3-4,".",".",$6}' \
     | sort -k1,1 -k2,2n -k3,3n -k6,6 -S5G --parallel=${Threads} \
-    | bedtools genomecov -bga -i - -g tmp_chromSizes.txt \
+    | bedtools genomecov -bg -i - -g tmp_chromSizes.txt \
     | mawk -v ASF=${SF} 'OFS="\t" {print $1,$2,$3,$4*ASF}' \
     | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${Out}
+    
   fi  
   
 }; export -f BiggyWiggy
