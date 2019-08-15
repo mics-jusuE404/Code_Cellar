@@ -65,7 +65,6 @@ while getopts asmb:e:p:w:e:j:t: OPT
   case ${OPT} in                       
     b) BAMS="${OPTARG}"          ;;
     a) ATACseq="TRUE"            ;;        
-    c) CutSites="TRUE"           ;;
     s) PairedEnd="TRUE"          ;;
     e) Extend="${OPTARG}"        ;;
     p) Peaks="${OPTARG}"         ;;
@@ -94,6 +93,17 @@ done
 >&2 echo '---------------------------------------------------------------------------------------------'
 >&2 echo ''
 
+export BAMS
+export ATACseq
+export PairedEnd
+export Extend
+export Peaks
+export Mean
+export WiggleTools
+export Rscript
+export Jobs
+export Threads
+
 #############################################################################################################################################
 
 ## Check if required tools are in PATH and/or callable:
@@ -110,7 +120,7 @@ function PathCheck {
 }; export -f PathCheck
 
 ## All tools:
-TOOLS=(${WiggleTools} ${Rscript} bamCoverage featureCounts bc wigToBigWig)
+TOOLS=(${WiggleTools} ${Rscript} bamCoverage featureCounts bc wigToBigWig bg2bw bedtools mawk)
 
 ## Loop through the tools and write to missing_tools.txt all those not in PATH / callable:
 for i in $(echo ${TOOLS[*]}); do
@@ -197,54 +207,72 @@ fi
 if [[ ! -e TMMfactors.txt ]] || (( $(head TMMfactors.txt | awk NF | wc -l | xargs) < 3 )); then
   (>&2 paste -d " " <(echo '[Error]' 'Size factor file is empty, absent or only one single entry'))
   exit 1
-fi  
+fi
+
+if [[ ! -e tmp_chromSizes.txt ]]; then
+    ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
+fi
 
 #############################################################################################################################################
 
 ## Bigwig with deeptools using the normalization factors:
 function BiggyWiggy {
   
-  BAM=${1}
-  Out=$(echo ${BAM} | awk '{gsub("_dedup.bam", "_TMM.bigwig");print}')
-  Threads=${2}
-  Extend=${3}
-  PairedEnd=${4}
+  BAM=$1
   
-  ## if no file, quit
+  Out=$(echo ${BAM} | awk '{gsub("_dedup.bam", "_TMM.bigwig");print}')
+  
   if [[ ! -e $BAM ]]; then
     (>&2 paste -d " " <(echo '[Error]' $BAM 'does not exist'))
     exit 1
-    fi
-  
-  ## if no index, do index =)  
-  if [[ ! -e ${BAM}.bai ]]; then
-    (>&2 paste -d " " <(echo '[Info]' 'Indexing' $BAM 'as no index found'))
-    samtools index -@ ${Threads} ${BAM}
-  fi
-  
+  fi  
+      
+  ## extract size factor and get reciprocal:
   SF=$(bc <<< "scale=10; $(grep "${BAM}" TMMfactors.txt | cut -f2)^-1")
     
-  Basic="bamCoverage --bam ${BAM} -o ${Out} -p ${Threads} -bs 1 --scaleFactor ${SF}"
+  if [[ "ATACseq" == FALSE ]]; then
   
-  ## Extension of reads to frags if paired-end data using TLEN:
-  if [[ $Extend != "FALSE" ]] && [[ $PairedEnd == "TRUE" ]]; then
-    eval "${Basic}" -e --Offset 4 2> ${BAM%.bam}_bamCoverage.log
+    ## if no index, do index =)  
+    if [[ ! -e ${BAM}.bai ]]; then
+      (>&2 paste -d " " <(echo '[Info]' 'Indexing' $BAM 'as no index found'))
+      samtools index -@ ${Threads} ${BAM}
+    fi
+  
+    ## the basic command for bamCoverage:
+    Basic="bamCoverage --bam ${BAM} -o ${Out} -p ${Threads} -bs 1 --scaleFactor ${SF}"
+  
+    ## Extension of reads to fragmentss if paired-end data using TLEN:
+    if [[ $PairedEnd == "TRUE" ]]; then
+      eval "${Basic}" -e 2> ${BAM%.bam}_bamCoverage.log
+    fi
+  
+    ## Extension of single end reads do user-defined frag. length
+    if [[ $Extend != "FALSE" ]] && [[ $PairedEnd == "FALSE" ]]; then
+      eval "${Basic}" -e ${Extend} 2> ${BAM%.bam}_bamCoverage.log
+    fi
+  
+    ## single-end but no extention
+    if [[ $Extend == "FALSE" ]]; then
+      eval "${Basic}" 2> ${BAM%.bam}_bamCoverage.log
+    fi
+    
   fi
   
-  ## Extension of single end reads do user-defined frag. length
-  if [[ $Extend != "FALSE" ]] && [[ $PairedEnd == "FALSE" ]]; then
-    eval "${Basic}" -e ${Extend} 2> ${BAM%.bam}_bamCoverage.log
-  fi
-  
-  if [[ $Extend == "FALSE" ]]; then
-    eval "${Basic}" 2> ${BAM%.bam}_bamCoverage.log
+  ## ATAC-seq mode, reduce reads to cutting site shifted by +4/-5 using awk:
+  if [[ $ATACseq == "TRUE" ]]; then
+    bedtools bamtobed -i ${BAM} \
+    | mawk 'OFS="\t"{if($6 == "+")print $1,$2+4,$2+5,".",".",$6}{if($6 == "-")print$1,$3-5,$3-4,".",".",$6}' \
+    | sort -k1,1 -k2,2n -k3,3n -k6,6 -S5G --parallel=${Threads} \
+    | bedtools genomecov -bga -i - -g tmp_chromSizes.txt \
+    | mawk -v ASF=${SF} 'OFS="\t" {print $1,$2,$3,$4*ASF}' \
+    | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${Out}
   fi  
   
 }; export -f BiggyWiggy
 
 (>&2 paste -d " " <(echo '[Info]' 'Creating bigwigs for each sample'))
 
-ls *_dedup.bam | parallel -j "${Jobs}" "BiggyWiggy {} ${Threads} ${Extend} ${PairedEnd}"
+ls *_dedup.bam | parallel -j "${Jobs}" "BiggyWiggy {}"
 
 #############################################################################################################################################
 
@@ -260,11 +288,15 @@ function BiggyAverage {
 
 }; export -f BiggyAverage 
 
-(>&2 paste -d " " <(echo '[Info]' 'Averaging bigwigs across replicates'))
-
 if [[ $Mean == "TRUE" ]]; then
-  if [[ ! -e tmp_chromSizes.txt ]]; then
-    ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
+  
+  (>&2 paste -d " " <(echo '[Info]' 'Averaging bigwigs across replicates'))
+  
+  if (( $(ls *rep*_TMM.bigwig 2> /dev/null | wc -l | xargs) == 0 )); then 
+    (>&2 paste -d " " <(echo '[Error]' 'No bigwigs found to be averaged!'))
+    exit 1
   fi
+  
   ls *rep*_TMM.bigwig | awk -F "_rep" '{print $1 | "sort -u"}' | parallel -j 8 "BiggyAverage {} ${WiggleTools}"
+  
 fi  
