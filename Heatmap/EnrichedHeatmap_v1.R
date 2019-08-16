@@ -2,21 +2,15 @@
 
 ## FIRST DRAFT, not finished yet!
 
-require(rtracklayer)
-require(GenomicRanges)
-require(EnrichedHeatmap)
-
-set.seed(2019)
-
 plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths (on disk)
                          bigwig.names = NULL,         ## a list of length(bigwigs) with the names to be used \
-                                                      ## as plot title 
+                         ## as plot title 
                          targets.gr,                  ## GRanges with target regions 
                          target.name,                 ## a name (e.g. cluster2) that will be used as part of file name for the pdf
                          window.size,                 ## window size [bp] to extend targers.gr center positions
                          pdf.dir = "./",              ## Plotting directory
                          scale.all = TRUE,            ## whether all produced plots should have the same axis / data range limits \
-                                                      ## with limits automatically determined from the data (20% +/- given data limits)
+                         ## with limits automatically determined from the data (20% +/- given data limits)
                          do.log2 = FALSE,             ## whether to log2-transform the bigwig
                          log2.prior = 1,              ## prior count in case of do.log2
                          col.low = "darkblue",        ## color to start gradient for low counts
@@ -36,13 +30,18 @@ plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths 
   }
   
   ## Package checks:
-  packageS <- c("rtracklayer", "GenomicRanges", "EnrichedHeatmap", "alexandria")
+  packageS <- c("rtracklayer", "GenomicRanges", "EnrichedHeatmap")
   if (length(grep("FALSE", (packageS %in% rownames(installed.packages())))) > 0){
     message("[Error]: Package(s) { ", 
-         paste(packageS[which( packageS %in% rownames(installed.packages()) == "FALSE")],collapse = " " ), 
-         " } are not installed!")
+            paste(packageS[which( packageS %in% rownames(installed.packages()) == "FALSE")],collapse = " " ), 
+            " } are not installed!")
     stop_quietly()
   }
+  
+  require(rtracklayer)
+  require(GenomicRanges)
+  require(EnrichedHeatmap)
+  set.seed(2019)
   
   #######################################################################################################################################
   
@@ -91,7 +90,7 @@ plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths 
   }
   
   if (length(
-        grep(paste0(paste0("^", c(col.low, col.high), "$"), collapse = "|"), colors())
+    grep(paste0(paste0("^", c(col.low, col.high), "$"), collapse = "|"), colors())
   ) < 2) {
     message("[Error]: Check colors!")
   }
@@ -119,7 +118,7 @@ plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths 
                             value_column = "score", 
                             extend = window.size/2)
     return(nM)
-    }
+  }
   )
   
   ## If scale.all then all plots will have the same range/axis limits.
@@ -133,7 +132,7 @@ plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths 
       tmp.min <- min(tmp.cm)
       tmp.max <- max(tmp.cm)
       data.frame(Min=tmp.min, Max=tmp.max)
-      }
+    }
     )
     
     ## Use 0 and 10% added to tmp.upper as limits:
@@ -214,7 +213,7 @@ plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths 
          padding = unit(c(3, 3, 4, 3), "mm") ## some padding to avoid labels beyond plot borders
     ); dev.off()
     
-    } ## end of mclapply plotting function
+  } ## end of mclapply plotting function
   ) ## end of mclapply itself
   
 } ## end wrapper function
