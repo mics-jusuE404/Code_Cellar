@@ -310,9 +310,10 @@ function BiggyAverage {
   ## for a reason I do not understand the bigwigs that wigToBw spills out are 10x larger than the 
   ## exact same file produced by bedGraph2bw therefore use that tool:
   ${WiggleTools} mean ${Files} \
-  | wigToBigWig /dev/stdin tmp_chromSizes.txt /dev/stdout \
-  | bigWigToBedGraph /dev/stdin /dev/stdout \
-  | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${Basename}_mean_TMM.bigwig
+  | wigToBigWig /dev/stdin tmp_chromSizes.txt ${Basename}_mean_TMM_big.bigwig
+  bigWigToBedGraph ${Basename}_mean_TMM_big.bigwig /dev/stdout \
+  | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${Basename}_mean_TMM.bigwig && \
+  rm ${Basename}_mean_TMM_big.bigwig
 
 }; export -f BiggyAverage 
 
