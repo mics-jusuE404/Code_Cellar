@@ -10,10 +10,11 @@ usage(){
 ---- Bigwig creation, normalization and optional averaging starting from BAM files.
 ---- Normalization method is TMM from edgeR.
 ---- USAGE: -h | --help         : Show this message
-            -b | --bams         : BAM files to process, e.g. "*.bam" or "A_dedup.bam B_dedup.bam" 
+            -b                  : BAM files to process, e.g. "*.bam" or "A_dedup.bam B_dedup.bam" 
                                   Use -b not --bam as --bam has a yet-unsolved bug!
             -a | --atacseq      : Set to trigger ATAC-seq mode (=counting cutting sites)           [FALSE]
             -s | --pairedend    : Set to count fragments instead of reads                          [FALSE]
+            -c | --onlytmm      : Only calculate TMM factors but do not create bigwigs             [FALSE]
             -e | --extend       : Number of bp to extend reads to fragments.                       [0]                                        
             -p | --peaks        : Reference peak list to create the count matrix from              [no default]
             -m | --mean         : If set perform averaging of replicates                   
@@ -31,6 +32,7 @@ usage(){
 ## Set defaults:
 
 ATACseq="FALSE" 
+OnlyCounts="FALSE"
 PairedEnd="FALSE"
 Extend="FALSE"
 Mean="FALSE"
@@ -44,11 +46,11 @@ Threads=16
 for arg in "$@"; do                         # for every arg in the commandline array ("$@")
  shift                                      # Shift by one so as to skip the script name
  case "$arg" in
-   "--bams")      set -- "$@" "-b"   ;;   # 
    "--atacseq")   set -- "$@" "-a"   ;;   #
    "--pairedend") set -- "$@" "-s"   ;;   #
    "--extend")    set -- "$@" "-e"   ;;   #
    "--peaks")     set -- "$@" "-p"   ;;   #
+   "--onlytmm")   set -- "$@" "-c"   ;;   #
    "--mean")      set -- "$@" "-m"   ;;   #
    "--wiggle")    set -- "$@" "-w"   ;;   #
    "--rscript")   set -- "$@" "-r"   ;;   #
@@ -60,11 +62,12 @@ done
 
 #############################################################################################################################################
 
-while getopts asmb:e:p:w:e:j:t: OPT       
+while getopts acsmb:e:p:w:e:j:t: OPT       
   do   
   case ${OPT} in                       
     b) BAMS="${OPTARG}"          ;;
-    a) ATACseq="TRUE"            ;;        
+    a) ATACseq="TRUE"            ;;   
+    c) OnlyCounts="TRUE"         ;;
     s) PairedEnd="TRUE"          ;;
     e) Extend="${OPTARG}"        ;;
     p) Peaks="${OPTARG}"         ;;
@@ -80,10 +83,11 @@ done
 >&2 echo ''
 >&2 echo '---------------------------------------------------------------------------------------------'
 >&2 echo '[Info] Running with these parameters:'
->&2 echo '       --bams      = ' ${BAMS}
+>&2 echo '       -b          = ' ${BAMS}
 >&2 echo '       --atacseq   = ' "${ATACseq}"
 >&2 echo '       --pairedend = ' "${PairedEnd}"
 >&2 echo '       --extend    = ' "${Extend}"
+>&2 echo '       --onlytmm   = ' "${OnlyCounts}"
 >&2 echo '       --peaks     = ' "${Peaks}"
 >&2 echo '       --mean      = ' "${Mean}"
 >&2 echo '       --wiggle    = ' "${WiggleTools}"
@@ -95,6 +99,7 @@ done
 
 export BAMS
 export ATACseq
+export OnlyCounts
 export PairedEnd
 export Extend
 export Peaks
@@ -220,6 +225,11 @@ if [[ ! -e tmp_chromSizes.txt ]]; then
     ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
 fi
 
+if [[ ${OnlyCounts} == "TRUE" ]]; then
+  (>&2 paste -d " " <(echo '[Info]' '--onlytmm is TRUE, therefore no bigwigs are created. Exiting.'))
+  exit 0
+  fi
+  
 #############################################################################################################################################
 
 ## Bigwig with deeptools using the normalization factors:
@@ -292,8 +302,17 @@ function BiggyAverage {
   WiggleTools=$2
   
   Files=$(ls ${Basename}*rep*_TMM.bigwig)
+  if (( $(echo $Files | xargs | wc -l) > 1 )); then 
+    echo "[Info]: Only one rep for" $Files
+    exit 0
+  fi
   
-  ${WiggleTools} mean ${Files} | wigToBigWig stdin tmp_chromSizes.txt ${Basename}_mean_TMM.bigwig
+  ## for a reason I do not understand the bigwigs that wigToBw spills out are 10x larger than the 
+  ## exact same file produced by bedGraph2bw therefore use that tool:
+  ${WiggleTools} mean ${Files} \
+  | wigToBigWig /dev/stdin tmp_chromSizes.txt /dev/stdout \
+  | bigWigToBedGraph /dev/stdin /dev/stdout \
+  | bg2bw -i /dev/stdin -c tmp_chromSizes.txt -o ${Basename}_mean_TMM.bigwig
 
 }; export -f BiggyAverage 
 
@@ -308,4 +327,4 @@ if [[ $Mean == "TRUE" ]]; then
   
   ls *rep*_TMM.bigwig | awk -F "_rep" '{print $1 | "sort -u"}' | parallel -j 8 "BiggyAverage {} ${WiggleTools}"
   
-fi  
+fi
