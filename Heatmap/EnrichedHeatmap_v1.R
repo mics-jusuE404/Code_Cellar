@@ -1,6 +1,6 @@
 ## Wrapper for EnrichedHeatmap, producing heatmaps for one target and one or many bigwigs.
 
-## FIRST DRAFT, not finished yet!
+## It is recommended to run via Rscript as Rstudio might/will mess up the forking of mclapply!
 
 plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths (on disk)
                          bigwig.names = NULL,         ## a list of length(bigwigs) with the names to be used as plot title 
