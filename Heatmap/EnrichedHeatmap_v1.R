@@ -153,7 +153,8 @@ plot.EnrHtmp <- function(bigwigs,                     ## a list of bigwig paths 
       }
     )
     
-    ## Use 0 and 10% added to tmp.upper as limits:
+    ## Y-limits, use the min/max values of the dara range plus/minus 20% to avoid values basically
+    ## touching the plot box around the profile plot
     tmp.ylims.profile <- c( round(( min(unlist(tmp.r[1,])) - (min(unlist(tmp.r[1,])) * 0.2) ), digits = 3), 
                             round(( max(unlist(tmp.r[2,])) + (max(unlist(tmp.r[2,])) * 0.2) ), digits = 3) 
     )
