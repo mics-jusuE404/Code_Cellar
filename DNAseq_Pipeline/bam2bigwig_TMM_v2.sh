@@ -257,7 +257,7 @@ function BiggyWiggy {
   fi  
       
   ## extract size factor and get reciprocal:
-  SF=$(bc <<< "scale=10; $(grep "${BAM}" TMMfactors.txt | cut -f2)^-1")
+  SF=$(bc <<< "scale=10; $(grep "^${BAM}" TMMfactors.txt | cut -f2)^-1")
     
   if [[ $ATACseq == "FALSE" ]]; then
     ## if no index, do index =)  
