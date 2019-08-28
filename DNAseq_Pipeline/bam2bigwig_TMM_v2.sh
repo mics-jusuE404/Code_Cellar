@@ -15,6 +15,7 @@ usage(){
             -a | --atacseq      : Set to trigger ATAC-seq mode (=counting cutting sites)           [FALSE]
             -s | --pairedend    : Set to count fragments instead of reads                          [FALSE]
             -c | --onlytmm      : Only calculate TMM factors but do not create bigwigs             [FALSE]
+            -g | --onlybw       : Assume TMM factors present, directly do bigwigs                  [FALSE]
             -e | --extend       : Number of bp to extend reads to fragments.                       [0]                                        
             -p | --peaks        : Reference peak list to create the count matrix from              [no default]
             -m | --mean         : If set perform averaging of replicates                   
@@ -33,6 +34,7 @@ usage(){
 
 ATACseq="FALSE" 
 OnlyCounts="FALSE"
+OnlyBw="FALSE"
 PairedEnd="FALSE"
 Extend="FALSE"
 Mean="FALSE"
@@ -49,6 +51,7 @@ for arg in "$@"; do                         # for every arg in the commandline a
    "--atacseq")   set -- "$@" "-a"   ;;   #
    "--pairedend") set -- "$@" "-s"   ;;   #
    "--extend")    set -- "$@" "-e"   ;;   #
+   "--onlybw")    set -- "$@" "-g"   ;;   #
    "--peaks")     set -- "$@" "-p"   ;;   #
    "--onlytmm")   set -- "$@" "-c"   ;;   #
    "--mean")      set -- "$@" "-m"   ;;   #
@@ -62,11 +65,12 @@ done
 
 #############################################################################################################################################
 
-while getopts acsmb:e:p:w:e:j:t: OPT       
+while getopts agcsmb:e:p:w:e:j:t: OPT       
   do   
   case ${OPT} in                       
     b) BAMS="${OPTARG}"          ;;
     a) ATACseq="TRUE"            ;;   
+    g) OnlyBw="TRUE"             ;;
     c) OnlyCounts="TRUE"         ;;
     s) PairedEnd="TRUE"          ;;
     e) Extend="${OPTARG}"        ;;
@@ -88,6 +92,7 @@ done
 >&2 echo '       --pairedend = ' "${PairedEnd}"
 >&2 echo '       --extend    = ' "${Extend}"
 >&2 echo '       --onlytmm   = ' "${OnlyCounts}"
+>&2 echo '       --onlybw    = ' "${OnlyBw}"
 >&2 echo '       --peaks     = ' "${Peaks}"
 >&2 echo '       --mean      = ' "${Mean}"
 >&2 echo '       --wiggle    = ' "${WiggleTools}"
@@ -101,6 +106,7 @@ export BAMS
 export ATACseq
 export OnlyCounts
 export PairedEnd
+export OnlyBw
 export Extend
 export Peaks
 export Mean
@@ -187,49 +193,55 @@ EOF
 
 #############################################################################################################################################
 
-## Make SAF format from peak list
-(>&2 paste -d " " <(echo '[Info]' 'Writing SAF file'))
-
-awk 'OFS="\t" {print $1"_"$2+1"_"$3, $1, $2+1, $3, "+"}' "${Peaks}" > "${Peaks}".saf
-
-## Countmatrix:
-(>&2 paste -d " " <(echo '[Info]' 'Creating count matrix'))
-
-fcBasic="featureCounts -a ${Peaks}.saf -F SAF -o ${Peaks}.saf.countmatrix -T ${Threads}"
-
-## customize featureCounts based on assay and sequencing type:
-if [[ $ATACseq == "TRUE" ]]; then
-  eval "${fcBasic}" --read2pos 5 ${BAMS} 2> ${Peaks}.saf.countmatrix.log
-elif [[ $PairedEnd == "TRUE" ]]; then
-  eval "${fcBasic}" -p ${BAMS} 2> ${Peaks}.saf.countmatrix.log
-else
-  eval "${fcBasic}" ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+if [[ $OnlyBw == "FALSE" ]]; then
+  ## Make SAF format from peak list
+  (>&2 paste -d " " <(echo '[Info]' 'Writing SAF file'))
+  
+  awk 'OFS="\t" {print $1"_"$2+1"_"$3, $1, $2+1, $3, "+"}' "${Peaks}" > "${Peaks}".saf
+  
+  ## Countmatrix:
+  (>&2 paste -d " " <(echo '[Info]' 'Creating count matrix'))
+  
+  fcBasic="featureCounts -a ${Peaks}.saf -F SAF -o ${Peaks}.saf.countmatrix -T ${Threads}"
+  
+  ## customize featureCounts based on assay and sequencing type:
+  if [[ $ATACseq == "TRUE" ]]; then
+    eval "${fcBasic}" --read2pos 5 ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+  elif [[ $PairedEnd == "TRUE" ]]; then
+    eval "${fcBasic}" -p ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+  else
+    eval "${fcBasic}" ${BAMS} 2> ${Peaks}.saf.countmatrix.log
+  fi  
+  
+  ## feed to edgeR and obtain effetive normalization factors:
+  (>&2 paste -d " " <(echo '[Info]' 'Calculating TMM factors'))
+  
+  ## if a TMMfactors.txt already exist, move it to other name:
+  if [[ -e TMMfactors.txt ]]; then mv TMMfactors.txt TMMfactors_existing.txt; fi
+  
+  if [[ -e "${Peaks}".saf.countmatrix ]] && [[ $(head "${Peaks}".saf.countmatrix | wc -l | xargs) > 0 ]]; then
+    cat "${Peaks}".saf.countmatrix | ${Rscript} calculateTMM.R
+  fi
+  
+  if [[ ! -e TMMfactors.txt ]] || (( $(head TMMfactors.txt | awk NF | wc -l | xargs) < 3 )); then
+    (>&2 paste -d " " <(echo '[Error]' 'Size factor file is empty, absent or only one single entry'))
+    exit 1
+  fi
+  
+  if [[ ! -e tmp_chromSizes.txt ]]; then
+      ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
+  fi
 fi  
-
-## feed to edgeR and obtain effetive normalization factors:
-(>&2 paste -d " " <(echo '[Info]' 'Calculating TMM factors'))
-
-## if a TMMfactors.txt already exist, move it to other name:
-if [[ -e TMMfactors.txt ]]; then mv TMMfactors.txt TMMfactors_existing.txt; fi
-
-if [[ -e "${Peaks}".saf.countmatrix ]] && [[ $(head "${Peaks}".saf.countmatrix | wc -l | xargs) > 0 ]]; then
-  cat "${Peaks}".saf.countmatrix | ${Rscript} calculateTMM.R
-fi
-
-if [[ ! -e TMMfactors.txt ]] || (( $(head TMMfactors.txt | awk NF | wc -l | xargs) < 3 )); then
-  (>&2 paste -d " " <(echo '[Error]' 'Size factor file is empty, absent or only one single entry'))
-  exit 1
-fi
-
-if [[ ! -e tmp_chromSizes.txt ]]; then
-    ls *dedup.bam | head -n 1 | while read p; do samtools idxstats $p | cut -f1,2 > tmp_chromSizes.txt; done
-fi
 
 if [[ ${OnlyCounts} == "TRUE" ]]; then
   (>&2 paste -d " " <(echo '[Info]' '--onlytmm is TRUE, therefore no bigwigs are created. Exiting.'))
   exit 0
-  fi
-  
+fi
+
+if [[ $OnlyBw == "TRUE" ]] && [[ -e TMMfactors.txt ]]; then
+  (>&2 paste -d " " <(echo '[Info]' '--onlybw is TRUE, therefore use existing TMMfactors.txt'))
+fi
+
 #############################################################################################################################################
 
 ## Bigwig with deeptools using the normalization factors:
