@@ -1,5 +1,6 @@
 ## Wrapper for differential analysis with edgeR downstream of timport from salmon quantifications.
 ## Expected naming convention is that the quantification folder (where quant.sf is in) suffixes with _salmon
+GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
 
 salmon2edgeR <- function(Basename,                   ## Prefix for all elements saved to disk/envir
                          SalmonDir,                  ## the path to the folder with the salmon quantifications
@@ -10,6 +11,9 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
                          Save.RawDGElist = FALSE,    ## if TRUE saves the DGElist prior to all FilterByExpr etc
                          MakeMAplots = "groupwise",  ## one of c("all", "groupwise", "none") for explaroatory MA-plots
                          MakePCAplot = TRUE,         ## guess what
+                         Return.PCA = FALSE,         ## whether to return the PCA data
+                         log.PCA = TRUE,             ## PCA based on log2(+1) CPM
+                         Return.SE = FALSE,          ## whether to return the summarized experiments with norm. counts used for PCA
                          nPCAgenes = 1000,           ## the number of genes to select for PCA
                          Return.tximport = F,        ## whether to save the tximport result to envir
                          Coldata = NULL,             ## Coldata for differential expression
@@ -34,12 +38,12 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   
   ####################################################################################################################################################
   
-  library(tximport)
-  library(data.table)
-  library(edgeR)
-  library(csaw)
-  library(statmod)
-  library(DESeq2)
+  suppressPackageStartupMessages(require(tximport))
+  suppressPackageStartupMessages(require(data.table))
+  suppressPackageStartupMessages(require(edgeR))
+  suppressPackageStartupMessages(require(csaw))
+  suppressPackageStartupMessages(require(statmod))
+  suppressPackageStartupMessages(require(DESeq2))
   
   ####################################################################################################################################################
   
@@ -174,19 +178,14 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   names(assays(se))[1] <- "counts"
   se$totals <- y$samples$lib.size
   assay(se, "offset") <- y$offset
-  se.cpm <- calculateCPM(se, use.norm.factors = F, use.offsets = T, log = F)
+  se.cpm <- calculateCPM(se, use.norm.factors = FALSE, use.offsets = TRUE, log = FALSE)
   
   ## To envir and disk:
   assign(x = paste(Basename, "_CPM.df", sep=""), value = data.frame(se.cpm), envir = .GlobalEnv)
   
   if (!dir.exists("./Lists")) dir.create("./Lists")
-  write.table(x = data.frame(Gene=rownames(se.cpm), se.cpm), quote = F, row.names = F, col.names = T, sep="\t", 
+  write.table(x = data.frame(Gene=rownames(se.cpm), se.cpm), quote = FALSE, row.names = FALSE, col.names = TRUE, sep="\t", 
               file = paste("./Lists/", paste(GetDate(), Basename, "CPM.tsv", sep="_"), sep = ""))
-  
-  ## New SE object for later use with DESeq2::plotPCA:
-  se.deseq2 <- SummarizedExperiment(assays = se.cpm)
-  se.deseq2$samples <- as.factor(colnames(assay(se.deseq2)))
-  se.deseq2$groups  <- as.factor(sapply(strsplit(colnames(assay(se.deseq2)), split="_rep"), function(x)x[1]))
   
   ####################################################################################################################################################
   
@@ -197,11 +196,26 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     
     message("Plotting PCA")
     
+    ## New SE object for later use with DESeq2::plotPCA:
+    se.deseq2 <- SummarizedExperiment(assays = se.cpm)
+    se.deseq2$samples <- as.factor(colnames(assay(se.deseq2)))
+    se.deseq2$groups  <- as.factor(sapply(strsplit(colnames(assay(se.deseq2)), split="_rep"), function(x)x[1]))
+    
+    if(log.PCA) assay(se.deseq2) <- log2(assay(se.deseq2)+1)
+    
+    if (Return.SE) assign(paste0(Basename, "_cpm.se"), se.deseq2, envir = .GlobalEnv)
+    
     se.deseq2 <- DESeqTransform(se.deseq2)
     
-    pdf(paper = "a4", file = paste(WorkingDir, "/Plots/", GetDate(), "_", Basename, "_PCA_top2k.pdf", sep=""))
+    pdf(paper = "a4", file = paste0(WorkingDir, "/Plots/", GetDate(), "_", Basename, "_PCA_top", round(nPCAgenes/1000, digits=2), "k.pdf"))
     print(DESeq2::plotPCA(object = se.deseq2, intgroup="groups", nPCAgenes))
     dev.off()
+    
+    if (Return.PCA) {
+      assign(paste0(Basename, ".PCAdata"),
+             DESeq2::plotPCA(object = se.deseq2, intgroup="groups", nPCAgenes, returnData = TRUE),
+             envir = .GlobalEnv)
+    }
     
   }
   
@@ -369,9 +383,8 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     current.out <- data.frame(Gene = rownames(current.out), current.out)
     rownames(current.out) <- NULL
     
-    current.out.signif <- current.out[current.out$FDR < 0.05,]
     write.table(sep="\t", quote = F, row.names = F, col.names = T,
-                file = paste0("./Lists/", GetDate(), "_", tmp.assignname, "_FDR5perc", ".tsv"), x = current.out.signif)
+                file = paste0("./Lists/", GetDate(), "_", tmp.assignname, ".tsv"), x = current.out)
     
     assign( tmp.assignname,
             current.out, envir = .GlobalEnv)
