@@ -166,7 +166,7 @@ if (ncol(raw.counts) == 7) {
 raw.counts <- raw.counts[,7:ncol(raw.counts)]
 
 ## normFactors:
-tmp.NF <- calcNormFactors(object = raw.counts, method = c("TMM"))
+tmp.NF <- calcNormFactors(object = raw.counts, method = c("TMM"), doWeighting = FALSE)
 
 ## raw library size:
 tmp.LS <- colSums(raw.counts)
