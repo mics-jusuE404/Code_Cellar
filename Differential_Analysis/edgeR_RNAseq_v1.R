@@ -19,6 +19,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
                          Coldata = NULL,             ## Coldata for differential expression
                          Design = NULL,              ## design for edgeR
                          Contrasts = NULL,           ## contrasts based on makeContrasts
+                         Test.AnyDiff = NULL,        ## if TRUE use ANOVA-like test to detect any differences (manual edgeR 3.2.6)
                          Thresh.glmTreat = NULL,     ## fold change to test against as null hypothesis     
                          FilterByExpr = TRUE,        ## whether or not to use that filter from edgeR
                          Save.ImageName = NULL       ## if not null, save image to that file in the format ./R/GetDate()_<name>.Rdata
@@ -34,6 +35,12 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   if ( (FALSE %in% unlist(tmp.check)) == TRUE ) {
     tmp.which <- which(tmp.check == FALSE)
     stop(paste("These packages are not installed [ ", paste(names(tmp.which), collapse = " | "), " ]", sep=""))
+  }
+  
+  if(!is.null(Test.AnyDiff)){
+    if(!colnames(Pundhir2018.design)[1] == "(Intercept)"){
+      stop("The design does not have an intercept but Test.AnyDiff is set to TRUE")
+    }
   }
   
   ####################################################################################################################################################
@@ -332,6 +339,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     }; stop_quietly()
   }
   
+  ## Standard workflow using contrasts:
   message("Differential analysis")
   
   ## add coldata to DGElist:
@@ -352,45 +360,62 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   fit <- glmQLFit(y, design = Design)
   assign(paste0(Basename, ".glmQLFit"), fit, envir = .GlobalEnv)
   
-  ## Test all specified contrasts:
-  message("Testing all Contrasts (total of ", dim(Contrasts)[2],")")
+  if (is.null(Test.AnyDiff)){
+    
+    ## Test all specified contrasts:
+    message("Testing all Contrasts (total of ", dim(Contrasts)[2],")")
+    
+    for (i in seq(1,dim(Contrasts)[2])){
+      
+      ## current contrast:
+      if (is.null(Thresh.glmTreat)){
+        message("Null hypothesis is FC=0")
+        current.results <- glmQLFTest(fit, contrast = Contrasts[,i])
+      }
+      
+      if (!is.null(Thresh.glmTreat) && is.numeric(Thresh.glmTreat)){
+        message("Null hypothesis is FC = ",Thresh.glmTreat, " for ", attr(Contrasts, "dimnames")$Contrasts[i])
+        current.results <- glmTreat(glmfit = fit, contrast = Contrasts[,i], lfc = log2(Thresh.glmTreat))
+      }
+      
+      ## Save the FDR-adjusted TT:
+      current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
+      current.out <- current.out$table
+      
+      tmp.assignname <- paste0(Basename, "_topTags_", gsub("-", "_", attr(Contrasts, "dimnames")$Contrasts[i]))
+      
+      ## MA-plots:
+      pdf(paste0("./Plots/", GetDate(), "_", tmp.assignname, ".pdf"), paper = "a4r")
+      par(mfrow=c(1,1), bty="n")
+      smoothScatter_TopTags(current.out, MAIN = tmp.assignname)
+      dev.off()
+      
+      current.out <- data.frame(Gene = rownames(current.out), current.out)
+      rownames(current.out) <- NULL
+      
+      write.table(sep="\t", quote = F, row.names = F, col.names = T,
+                  file = paste0("./Lists/", GetDate(), "_", tmp.assignname, ".tsv"), x = current.out)
+      
+      assign( tmp.assignname,
+              current.out, envir = .GlobalEnv)
+      
+      rm(current.results)
+    }
+  } ## end of testing contrasts
   
-  for (i in seq(1,dim(Contrasts)[2])){
-    
-    ## current contrast:
-    if (is.null(Thresh.glmTreat)){
-      message("Null hypothesis is FC=0")
-      current.results <- glmQLFTest(fit, contrast = Contrasts[,i])
-    }
-    
-    if (!is.null(Thresh.glmTreat) && is.numeric(Thresh.glmTreat)){
-      message("Null hypothesis is FC = ",Thresh.glmTreat, " for ", attr(Contrasts, "dimnames")$Contrasts[i])
-      current.results <- glmTreat(glmfit = fit, contrast = Contrasts[,i], lfc = log2(Thresh.glmTreat))
-    }
-    
-    ## Save the FDR-adjusted TT:
-    current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
-    current.out <- current.out$table
-    
-    tmp.assignname <- paste0(Basename, "_topTags_", gsub("-", "_", attr(Contrasts, "dimnames")$Contrasts[i]))
-    
-    ## MA-plots:
-    pdf(paste0("./Plots/", GetDate(), "_", tmp.assignname, ".pdf"), paper = "a4r")
-    par(mfrow=c(1,1), bty="n")
-    smoothScatter_TopTags(current.out, MAIN = tmp.assignname)
-    dev.off()
-    
+  if (Test.AnyDiff){
+    current.result <- glmQLFTest(fit, coef=2:length(colnames(Design)))
+    current.out    <- topTags(current.result, n=Inf, adjust.method="BH", sort.by="none")
+    current.out    <- current.out$table
+    tmp.assignname <- paste0(Basename, "_topTags_AnyDifference")
     current.out <- data.frame(Gene = rownames(current.out), current.out)
     rownames(current.out) <- NULL
     
     write.table(sep="\t", quote = F, row.names = F, col.names = T,
                 file = paste0("./Lists/", GetDate(), "_", tmp.assignname, ".tsv"), x = current.out)
-    
     assign( tmp.assignname,
             current.out, envir = .GlobalEnv)
-    
-    rm(current.results)
-  }
+  } ## end ov ANOVA-like test for any differences
   
   assign(paste0(Basename, "_final.DGElist"), y, envir = .GlobalEnv)
   
