@@ -1,30 +1,41 @@
-## Differential analysis for DNA-seq experiments (ChIP-seq, ATAC-seq) starting from a count matrix.
-## Performs normalization, plots exploratory MA-plots and PCA, performs diff. analysis, saves everything
-## to disk
+## Wrapper for edgeR/csaw-based differential analysis for DNA-seq such as ATAC/ChIP-seq.
+## Minimum required input is a ranged count matrix (GRanges), an edgeR design and contrasts.
+##
+## First step is count normalization. For this TMM from edgeR is used based on the peak counts,
+## unless Bins.gr is provided, so counts across large (e.g.10kb) bins across the genome.
+## See csaw manual for details.
+## Next will make PCA and MA-plots for quality- and normalization control / visualization.
+## If Design = NULL, will perform no differential analysis.
+## Else, will perform standard DE analysis based on the provided Design and Contrasts (makeContrasts output).
+## DE tables (topTags) will be written to disk plus will make MA-plots with significant regions colored in red
+##
+## Depends on csaw, edgeR, DESeq2,statmod packages
+##
+###################################################################################################################
 
-###########################################################################################################
-
-csaw_counts2TopTags <- 
-  function(Basename,                       ## the prefix for everything written to disk
-           Counts.gr,                      ## GRanges with raw counts
-           Bins.gr = NULL,                 ## if a count matrix is provided here, use for largebins norm.
-           Colnames.Suffix = "_dedup.bam", ## either suffix or ""
-           MakeMAplots = "groupwise",      ## c("all", "groupwise", "none")
-           MakePCAplot = TRUE,             ## PCA plot based of DESeq2::plotPCA
+edgeR_DNAseq <- 
+  function(Basename,                       ## the prefix for this analysis
+           Counts.gr,                      ## GRanges object with raw counts
+           Bins.gr = NULL,                 ## optional GRanges with counts of large bins for normalization
+           Colnames.Suffix = NULL,         ## suffix to trim away from the colnames of the count matrices
+           MakeMAplots = "groupwise",      ## c("all", "groupwise", "none") for MA-plots after normalization
+           MakePCAplot = TRUE,             ## whether to make PCA plot based on DESeq2::plotPCA
+           nTopPCA = 5000,                 ## number of top-variable elements to calculate PCs for PCA
+           logPCA = TRUE,                  ## whether to use log2-transformed norm. counts for PCA
+           returnDST = FALSE,              ## whether to return the DESeqTransform used for PCA as Basename.dst
            WriteCpmToDisk = TRUE,          ##
-           WorkingDir = "./",              ## the directory to save MA-plots
+           WorkingDir = "./",              ## the directory to write files to disk
            Design = NULL,                  ## experimental design for diff. analysis
            FiltByExpr = FALSE,             ## whether or not to use that filter
            Contrasts = NULL,               ## contrasts to test
            Thresh.glmTreat = NULL,         ## minFC to test against
-           Save.Image = TRUE,              ## whether to save Rdata to ./WorkingDir/R
-           ImageName = "tmp"               ## name for the image to be saved
+           Sig.Threshold = 0.05            ## FDR threshold to color significant regions in MA-plots
   )
   {
     
     GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
     
-    #########################################################################################################
+    ###############################################################################################################
     
     ## Check if required packages are installed:
     packageS <- c("csaw", "edgeR", "statmod", "DESeq2")
@@ -35,104 +46,103 @@ csaw_counts2TopTags <-
            " are not installed!")
     }
     
-    library(csaw)
-    library(edgeR)
-    library(statmod)
-    library(DESeq2)
+    require(csaw)
+    require(edgeR)
+    require(statmod) ## don't ask me what this is but edgeR needs it for something
+    require(DESeq2)  ## only for plotPCA
     
-    #########################################################################################################
+    ###############################################################################################################
     
-    ## Check parameters:
+    #### Some sanity checks:
     
-    if (class(Counts.gr) != "GRanges")         stop(call. = FALSE, "==> Counts.gr must be GRanges")
-    if (ncol(elementMetadata(Counts.gr)) == 0) stop(call. = FALSE, "==> Counts.gr appears to have no count data")
+    ## correct data format, contains count data and only numeric:
     
-    if (!is.numeric(as.matrix(elementMetadata(Counts.gr)))) {
-      stop(call. = FALSE, "==> Counts.gr seems to contain non-numeric values")
-    }
-    
-    
-    ## This one checks if any unwanted columns made it to the count matrix in Counts.gr:
-    if (sum(!grepl("_rep", colnames(elementMetadata(Counts.gr)))) > 0) {
-      warning("==> Not all colnames in the count matrix of Counts.gr have <_rep> in it. Better check that!")
-    }
-    
-    if (!is.null(Bins.gr)){
+    CheckCountsGR <- function(GRs){
       
-      if (class(Bins.gr) != "GRanges")   stop(call. = FALSE, "==> Bins.gr must be GRanges")
-      
-      if (ncol(elementMetadata(Bins.gr)) == 0) stop(call. = FALSE, "==> Bins.gr appears to have no count data")
-      
-      if (sum(!grepl("_rep", colnames(elementMetadata(Bins.gr)))) > 0) {
-        warning("==> Not all colnames in the count matrix of Bins.gr have <_rep> in it. Better check that!")
+      if (class(GRs) != "GRanges") stop(call. = FALSE, "Counts.gr must be a GRanges object")
+      if (ncol(elementMetadata(GRs)) == 0) {
+        stop(call. = FALSE, "Counts.gr does not seem to consist any count columns")
+      }
+      if (!is.numeric(as.matrix(elementMetadata(GRs)))) {
+        stop(call. = FALSE, "make sure Counts.gr countains numeric values")
       }
       
-      if (!is.numeric(as.matrix(elementMetadata(Bins.gr)))) {
-        stop(call. = FALSE, "==> Bins.gr seems to contain non-numeric values")
+      ## Check if all samples contain the _rep information
+      if(FALSE %in% unlist(lapply(colnames(elementMetadata(GRs)), function(x)grepl("_rep",x)))){
+        stop(call. = FALSE, "Make sure all sample names contain _rep information, e.g. Sample1_wildtype_rep1.bam")
       }
       
     }
     
-    ## Check if MakeMAplots is one of the three supported values:
-    if (sum(grepl(pattern = paste("^", MakeMAplots, "$", sep=""), 
-                  x = c("all", "groupwise", "none"))
-    ) == 0){ stop(call. = FALSE, "==> MakeMAplots must be one of (all, groupwise, none)")  }
+    ## Sanity check for peak counts and bibs:
+    CheckCountsGR(Counts.gr)
+    if (!is.null(Bins.gr)) CheckCountsGR(Counts.gr)
     
-    if (!is.logical(MakePCAplot)){
-      warning("==> MakePCAplot can only be TRUE or FALSE, set to FALSE now.")
+    ###############################################################################################################
+    
+    ## Check if MakeMAplots is one of the three supported options:
+    if(!MakeMAplots %in% c("all", "groupwise", "none")){
+      stop(call. = FALSE, "MakeMAplots must be one of (all, groupwise, none)")  
+    }
+    
+    ## if MakePCAplot is T/F
+    if (!is.logical(MakePCAplot) || !is.logical(logPCA)){
+      warning("==> MakePCAplot and logPCA must be boolean. Settings MakePCAplot to FALSE")
       MakePCAplot <- FALSE
     }
     
-    if (!is.null(Thresh.glmTreat) & !is.numeric(Thresh.glmTreat)){
-      stop("==> Thresh.glmTreat is not numeric")
-    }
-    
-    #########################################################################################################
-    
-    ## If not exists, create directories for plots and lists:
+    ## If not existing, create directories for plots and lists in specified working directory:
     if (!dir.exists(WorkingDir)){
       message("Creating WorkingDir: -- ", normalizePath(WorkingDir))
     }
+    for (i in c("Lists", "Plots")){
+      
+      if (!dir.exists(paste(WorkingDir, i,sep=""))){
+        dir.create(paste(WorkingDir, i,sep=""), showWarnings = TRUE)
+      }
+    }; rm(i)
     
-    if (!dir.exists(paste(WorkingDir, "Lists",sep=""))){
-      dir.create(paste(WorkingDir, "Lists",sep=""), showWarnings = T)
+    if(!is.null(Design)){
+      if (!is.null(Thresh.glmTreat) & !is.numeric(Thresh.glmTreat)) stop(call. = FALSE,
+                                                                         "Thresh.glmTreat is not numeric")
+      if(!is.logical(FiltByExpr)) stop(call. = FALSE, "FiltByExpr must be TRUE/FALSE")
+      if(is.null(Contrasts)) stop(call. = FALSE, "Please give Contrasts")
+      
     }
     
-    if (!dir.exists(paste(WorkingDir, "Plots",sep=""))){
-      dir.create(paste(WorkingDir, "Plots",sep=""), showWarnings = T)
-    }
+    if(!is.integer(nTopPCA)) stop(call. = FALSE, "nTopPCA must be an integer")
     
-    if (!dir.exists(paste(WorkingDir, "R",sep=""))){
-      dir.create(paste(WorkingDir, "R",sep=""), showWarnings = T)
-    }
+    ###############################################################################################################
     
-    #########################################################################################################
+    #### Start the actual work:
     
     message("[Started]:","\t", Basename)
     
-    ## Remove suffix from colnames:
-    colnames(elementMetadata(Counts.gr)) <- gsub(Colnames.Suffix, 
-                                                 "", 
-                                                 colnames(elementMetadata(Counts.gr)))
+    ## Optionally remove suffix from colnames of count matrix:
+    if(!is.null(Colnames.Suffix)){
+      colnames(elementMetadata(Counts.gr)) <- gsub(Colnames.Suffix,"",colnames(elementMetadata(Counts.gr)))
+    }
     
-    ## Create SummarizedExperiments object from input count matrix (which is GRanges):
+    ## Bring data in a format that csaw/edgeR can handle it (SummarizedExperiments):
     data.se <- SummarizedExperiment(
       list(counts=as.matrix(elementMetadata(Counts.gr))))
     
-    ## add total depth and ranges:
+    ## add total depth (=colSums) and ranges:
     data.se$totals     <- colSums(as.matrix(elementMetadata(Counts.gr)))
     rowRanges(data.se) <- Counts.gr[,0]
     
-    #########################################################################################################
+    ###############################################################################################################
     
-    ## If no counts for large bins are provided use TMM based on peak counts:
-    if (is.null(Bins.gr) == TRUE){
+    #### Normalize data, either based on the peak counts or based on the large bins:
+    
+    ## Peaks (if no bins.gr are provided):
+    if (is.null(Bins.gr)){
       message("Normalizing data based on peak counts")
       data.se <- normFactors(data.se, se.out=data.se)
     }
     
     ## Else, use bins:
-    if (is.null(Bins.gr) == FALSE){
+    if (!is.null(Bins.gr)){
       
       message("Normalizing data based on large bins")
       
@@ -143,39 +153,42 @@ csaw_counts2TopTags <-
       bins.se <- SummarizedExperiment(
         list(counts=as.matrix(elementMetadata(Bins.gr))))
       
-      bins.se$totals     <- colSums(as.matrix(elementMetadata(Bins.gr)))
+      bins.se$totals <- colSums(as.matrix(elementMetadata(Bins.gr)))
       
       nF <- normFactors(bins.se, se.out=FALSE)
       
+      ## Write the norm. factors into the original data.se (= counts in peaks) object
+      ## so that the bin-derived scaling factors will be used to correct the peak-based per-million counts
       data.se$norm.factors <- nF
       
     }
     
-    #########################################################################################################
+    ###############################################################################################################
     
-    ## Calculate per-millions:
+    #### Calculate CPMs and write to disk:
+    
     message("Calculating CPMs")
     CPM.Counts.gr <- Counts.gr[,0]
     
     elementMetadata(CPM.Counts.gr) <- as.matrix(
-      calculateCPM(object = data.se, use.norm.factors = T, log = F))
+      calculateCPM(object = data.se, use.norm.factors = TRUE, log = FALSE))
     
     ## Save cpm to disk:
     if (WriteCpmToDisk == TRUE){
       message("Writing CPMs to disk")
-      write.table(x = data.frame(CPM.Counts.gr)[,-c(4,5)], 
+      write.table(x = data.frame(CPM.Counts.gr)[,c(1,2,3)], 
                   file = paste(WorkingDir, "Lists/", 
                                GetDate(),"_", Basename, "_normCounts.tsv",
                                sep=""),
-                  quote = F, 
-                  col.names = T, 
-                  row.names = F,
+                  quote = FALSE, 
+                  col.names = TRUE, 
+                  row.names = FALSE,
                   sep="\t")
     }
     
-    #########################################################################################################
+    ###############################################################################################################
     
-    ## Main Function to produce MA-plots:
+    #### Function to produce MA-plots with smoothScatter:
     plotMA_custom <- function(COUNTS, MAIN = "", REPLACE.ZERO = 1){
       
       R=COUNTS[,1]
@@ -207,8 +220,9 @@ csaw_counts2TopTags <-
       
     }
     
-    #########################################################################################################
+    ###############################################################################################################
     
+    #### Wrapper for above function:
     Do_MAplot <- function(CPMs){
       
       ## MA-plots averaged over groups like *_rep*{Colnames.Suffix}, everything before _rep is a group:
@@ -242,7 +256,9 @@ csaw_counts2TopTags <-
             tmp.df <- data.frame(average.one, average.two)
             colnames(tmp.df) <- tmp.combn[,i]
             
-            plotMA_custom(COUNTS = tmp.df, MAIN = paste("Sample: ", paste(tmp.combn[,i], collapse=" over "), sep=""))
+            plotMA_custom(COUNTS = tmp.df, MAIN = paste("Sample: ", 
+                                                        paste(tmp.combn[,i], collapse=" over "), 
+                                                        sep=""))
             
           }
         }
@@ -252,6 +268,7 @@ csaw_counts2TopTags <-
         
         message("Printing MA-plots for all sample combinations")
         
+        ## use combn to make all pairwise combinations of the samples:
         tmp.combn <- combn(x = colnames(CPMs), m = 2)
         
         for (i in 1:ncol(tmp.combn)){
@@ -267,7 +284,7 @@ csaw_counts2TopTags <-
       }
     }
     
-    ## Call MA-plot function and append a suffix to the final pdf that indicates which norm method was used:
+    ## Call MA-plot function and append a suffix to the final pdf that indicates which norm. method was used:
     if (!is.null(Bins.gr)) SUFFIX <- "largebins"  
     if (is.null(Bins.gr))  SUFFIX <- "peakbased"
     
@@ -283,25 +300,36 @@ csaw_counts2TopTags <-
     }
     
     #########################################################################################################
-    ## Plot a PCA (for this transform cpm to rangedsummarizedexperiment and add coldata):
+    #### Plot a PCA (for this transform cpm to rangedsummarizedexperiment and add coldata):
+    
     if (MakePCAplot == TRUE){
       
       message("Plotting PCA")
       
+      tmp.counts <- as.matrix(elementMetadata(CPM.Counts.gr))
+      
+      ## by default use log2 normalized counts for PCA:
+      if(logPCA) tmp.counts <- log2(tmp.counts+1)
+      
+      ## make RangedSummarizedExperiments object to be compatible with DESeq2::plotPCA
       rse <- SummarizedExperiment(
-        list(counts=as.matrix(elementMetadata(CPM.Counts.gr))))
+        list(counts=tmp.counts))
       
       rowRanges(rse) <- CPM.Counts.gr[,0]
       rse <- DESeqTransform(rse)
+      
       rownames(colData(rse)) <- colnames(rse)
       colData(rse)$group <- as.factor(sapply(strsplit(colnames(rse), split="_rep"), function(x)x[1]))
       
-      pdf(paper = "a4", file = paste(WorkingDir, "/Plots/", GetDate(), "_PCA_top2k.pdf", sep=""))
-      print(plotPCA(object = rse, intgroup="group", 2000))
+      pdf(paper = "a4", file = paste(WorkingDir, "/Plots/", GetDate(), "_PCA_top",nTopPCA,".pdf", sep=""))
+      print(plotPCA(object = rse, intgroup="group", nTopPCA))
       dev.off()
+      
+      if(returnDST) assign(paste0(Basename,".dst"), rse, envir = .GlobalEnv)
     }
     
     #########################################################################################################
+    #### If Design is NULL stop here without differential analysis
     
     if (is.null(Design)) {
       message("No Design given therefore stop before differential analysis part")
@@ -315,15 +343,16 @@ csaw_counts2TopTags <-
     }
     
     #########################################################################################################
+    #### Start differential analysis:
     
-    ## Start differential analysis:
+    ## Bring to DGEList format:
     data.dge <- asDGEList(data.se)
     
-    if (FiltByExpr == TRUE) {
+    ## optionally filter for regions with sufficient counts for DE analysis
+    if (FiltByExpr) {
       keep <- filterByExpr(data.dge, design = Design)
-      data.se <- data.se[keep,]
-      data.dge <- data.dge[keep, , keep.lib.sizes=FALSE]
-      
+      #data.se <- data.se[keep,]
+      data.dge <- data.dge[keep, , keep.lib.sizes=FALSE] #looks odd but is copied from csaw
     }
     
     ## dispersion estimates:
@@ -332,16 +361,16 @@ csaw_counts2TopTags <-
     
     ## glm data.fit:
     message("Fitting model")
-    data.fit <- glmQLFit(data.dge, design = Design, robust = T)
+    data.fit <- glmQLFit(data.dge, design = Design, robust = TRUE) #robust=T is suggested for DNA-seq in csaw
     
-    ## to envir:
+    ## save in environment
     assign(paste(Basename, ".DGElist", sep=""),  data.dge, envir = .GlobalEnv)
     assign(paste(Basename, ".glmQLFit", sep=""), data.fit, envir = .GlobalEnv)
     
     #########################################################################################################
     
     ## before testing of contrasts starts define a function to plot MA-plots with signif regions colored:
-    smoothScatter_TopTags <- function(TT, SIG.THRESHOLD=0.05, MAIN) {
+    smoothScatter_TopTags <- function(TT, SIG.THRESHOLD=Sig.Threshold, MAIN) {
       
       ## ylim based on quantiles:
       YLIM <- c(floor(quantile(TT$logFC, 0.0001, na.rm=T)), ceiling(quantile(TT$logFC, 0.9999, na.rm=T)))
@@ -385,16 +414,18 @@ csaw_counts2TopTags <-
     
     #########################################################################################################
     
-    ## Test all Contrasts, optionally against a FC, and correct for multiple testing:
+    ## Test all specified contrasts, optionally against a certain FC with glmTreat,
+    ## and correct for multiple testing using default BH:
+    
     for (i in seq(1,dim(Contrasts)[2])){
       
-      ## Against 0:
+      ## If Thresh.glmTreat is not specified test against null of 0:
       if (is.null(Thresh.glmTreat)){
         message("Null hypothesis is FC = 0")
         current.results <- glmQLFTest(data.fit, contrast = Contrasts[,i])
       }
       
-      ## Against Thresh.glmTreat:
+      ## or against null of Thresh.glmTreat:
       if (!is.null(Thresh.glmTreat)){
         
         message("Null hypothesis is FC = ",
@@ -408,7 +439,7 @@ csaw_counts2TopTags <-
         
       }
       
-      ## Save the FDR-adjusted TT:
+      ## Save the FDR-adjusted TopTags without sorting so input = output order:
       current.out <- topTags(current.results, n=Inf, adjust.method="BH", sort.by="none")
       current.out <- data.frame( data.frame(rowRanges(data.se))[,1:3], current.out$table)
       
@@ -418,8 +449,7 @@ csaw_counts2TopTags <-
       ## save as variable to envir indicating the null hypothesis in the name:
       tmp.name <- paste(Basename, 
                         "_topTags_", 
-                        gsub("-", "_", 
-                             attr(Contrasts, "dimnames")$Contrasts[i]),
+                        gsub("-", "_", attr(Contrasts, "dimnames")$Contrasts[i]),
                         "_null_",
                         thr,
                         sep="")
@@ -429,12 +459,9 @@ csaw_counts2TopTags <-
               current.out,
               envir = .GlobalEnv)
       
-      ## to disk:
+      ## write results to disk
       write.table(current.out, sep="\t", col.names = T, row.names = F, quote = F,
-                  file=paste(WorkingDir, "/Lists/", GetDate(), "_", tmp.name, ".tsv", sep=""))
-      
-      write.table(current.out[current.out$FDR < 0.05,], sep="\t", col.names = T, row.names = F, quote = F,
-                  file=paste(WorkingDir, "/Lists/", GetDate(), "_", tmp.name, "_FDR5perc", ".tsv", sep=""))
+                  file=paste(WorkingDir, "/Lists/", GetDate(), "_", tmp.name, "_NullHypo_",thr,".tsv", sep=""))
       
       ## MA-plot:
       pdf(paste(WorkingDir, 
@@ -451,12 +478,6 @@ csaw_counts2TopTags <-
       #########################################################################################################
       
       rm(current.results)
-      
-    }
-    
-    ## save environment, simple dummy file name, should alter be renamed properly to match the script.R name                                           
-    if (Save.Image == TRUE){
-      save.image(paste(WorkingDir, "/R/", GetDate(), "_", ImageName, ".Rdata" ,sep=""))
       
     }
     
