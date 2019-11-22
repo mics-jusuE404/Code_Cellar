@@ -15,7 +15,8 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
                          log.PCA = TRUE,             ## PCA based on log2(+1) CPM
                          Return.SE = FALSE,          ## whether to return the summarized experiments with norm. counts used for PCA
                          nPCAgenes = 1000,           ## the number of genes to select for PCA
-                         Return.tximport = F,        ## whether to save the tximport result to envir
+                         Return.tximport = FALSE,    ## whether to save the tximport result to envir
+                         Only.tximport = FALSE,      ## only return tximport nothing else
                          Coldata = NULL,             ## Coldata for differential expression
                          Design = NULL,              ## design for edgeR
                          Contrasts = NULL,           ## contrasts based on makeContrasts
@@ -160,6 +161,8 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   } else {
     message("Removing smallRNAs is set to FALSE")
   }
+  
+  if(Only.tximport) return(txi)
   
   if (Return.tximport == TRUE) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
   
@@ -403,7 +406,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     }
   } ## end of testing contrasts
   
-  if (Test.AnyDiff){
+  if (!is.null(Test.AnyDiff)){
     current.result <- glmQLFTest(fit, coef=2:length(colnames(Design)))
     current.out    <- topTags(current.result, n=Inf, adjust.method="BH", sort.by="none")
     current.out    <- current.out$table
