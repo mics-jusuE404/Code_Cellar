@@ -55,7 +55,7 @@ motifs_JASPAR2018 <- jaspar()
 ## For this it is probably a good idea to merge all BAM files from the respective conditions
 ## and then call peaks on this to get a good "average" summit position:
 
-peaks_200bp <- readNarrowpeaks(filename = "merged_PeakSet.narrowPeak", 
+peaks_200bp <- readNarrowpeaks(filename = "peaks.narrowPeak", 
                                width = 200, 
                                non_overlapping = T)
 
@@ -91,7 +91,7 @@ Bam2Deviation <- function(FragmentCounts, Peaks, Outname, Genome, motifs = motif
   ## As this method does (AFAIK) not correct for multi. testing, it might be clever to use FIMO
   ## externally and feed the motif positions in manually.
   motif_ix <- matchMotifs(motifs, filtered_counts,
-                                 genome = Genome)
+                          genome = Genome)
   
   ## get deviation score:
   tmp.dev <- computeDeviations(object = filtered_counts, annotations = motif_ix)
