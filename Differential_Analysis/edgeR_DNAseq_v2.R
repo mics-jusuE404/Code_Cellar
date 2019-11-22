@@ -1,16 +1,22 @@
-## Wrapper for edgeR/csaw-based differential analysis for DNA-seq such as ATAC/ChIP-seq.
+## Wrapper script for differential count analysis of DNA-seq experiments (ATAC/ChIP-seq)
+## using the edgeR framework with code inspirted from the csaw package.
 ## Minimum required input is a ranged count matrix (GRanges), an edgeR design and contrasts.
 ##
 ## First step is count normalization. For this TMM from edgeR is used based on the peak counts,
-## unless Bins.gr is provided, so counts across large (e.g.10kb) bins across the genome.
-## See csaw manual for details.
-## Next will make PCA and MA-plots for quality- and normalization control / visualization.
+## unless nbins.gr is provided, so counts across large (e.g.10kb) bins across the genome.
+## See csaw manual for details towards this normalization method.
+## Next the script will make PCA and MA-plots for quality- and normalization control / visualization.
 ## If Design = NULL, will perform no differential analysis.
 ## Else, will perform standard DE analysis based on the provided Design and Contrasts (makeContrasts output).
-## DE tables (topTags) will be written to disk plus will make MA-plots with significant regions colored in red
+## DE tables (topTags) will be written to disk plus will make MA-plots with significant regions colored in red.
 ##
-## Depends on csaw, edgeR, DESeq2,statmod packages
+## Depends on 
+## csaw (CPM calculations), 
+## edgeR (differential testing), 
+## DESeq2 (plotPCA function) 
+## statmod (not exactly sure what this is but edgeR needs it for something...)
 ##
+## Contact: Alexander Toenges (a.toenges@uni-muenster.de), Institute for Molecular Tumor Biology (Muenster/Germany)
 ###################################################################################################################
 
 edgeR_DNAseq <- 
