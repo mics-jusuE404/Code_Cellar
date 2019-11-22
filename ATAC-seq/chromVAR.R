@@ -1,7 +1,7 @@
 #!/home/a/a_toen03/anaconda3/bin/Rscript
 
-## template script to run chromVAR on ATAC-seq data to infer differential motif usage between conditions:
-
+## Basic wrapper script to run chromVAR on two-condition bulk ATAC-seq data, e.g. wildtype vs. knockout condition.
+## In line 58 one specifies the peak files and on line 
 ##############################################################################################################################
 
 ## Packages:
@@ -51,24 +51,28 @@ motifs_JASPAR2018 <- jaspar()
 ##############################################################################################################################
 
 ## Step 1 -- Read in a list of reference ATAC-seq regions.
-## The function will take narrowPeak (e.g. fro  macs2) and extend the summit by 200bp.
-## For this it is probably a good idea to merge all BAM files from the respective conditions
-## and then call peaks on this to get a good "average" summit position:
-
+## The function will take narrowPeak (e.g. from macs2) and extend the summit by 200bp.
+## We use 200bp to avoid excessive motif matches by chance.
 peaks_200bp <- readNarrowpeaks(filename = "peaks.narrowPeak", 
                                width = 200, 
-                               non_overlapping = T)
+                               non_overlapping = TRUE)
 
-## With this peak set, make a count matrix, filling in the BAMs and conditions.
-## bam.list is a list with paths to the BAM files.
-## colData lists the conditions for each BAM, e.g. for 3 untreated and 3 treated samples could be,
-## c( rep("untreated", 3), rep("treated", 3) )
+## With this peak set, make a count matrix, here indicate the BAM files:
+bam.list <- c("file_condition1_rep1.bam", 
+              "file_condition1_rep2.bam",
+              "file_condition2_rep1.bam",
+              "file_condition2_rep1.bam")
+
+## count reads per peak. colData indicates the conditions that the BAM files correspond to:
 peaks_counts          <- getCounts(alignment_files = c(bam.list), 
                                    peaks           = peaks_untreated_200bp, 
                                    paired          = TRUE, 
                                    by_rg           = FALSE, 
                                    format          = "bam", 
-                                   colData         = DataFrame(condition = c("conditions")))
+                                   colData         = DataFrame(condition = c("condition1", 
+                                                                             "condition1",
+                                                                             "condition2",
+                                                                             "condition2")))
 
 ##############################################################################################################################
 
