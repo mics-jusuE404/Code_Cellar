@@ -1,5 +1,7 @@
-## Wrapper for differential analysis with edgeR downstream of timport from salmon quantifications.
+## Wrapper for differential analysis with edgeR downstream of tximport based on salmon quantifications.
 ## Expected naming convention is that the quantification folder (where quant.sf is in) suffixes with _salmon
+## and that replicates are indicated as *_repN_salmon
+
 GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
 
 salmon2edgeR <- function(Basename,                   ## Prefix for all elements saved to disk/envir
@@ -26,8 +28,6 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
                          Save.ImageName = NULL       ## if not null, save image to that file in the format ./R/GetDate()_<name>.Rdata
                          
 ){
-  
-  GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
   
   ####################################################################################################################################################
   
@@ -119,7 +119,9 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   ## Use the default tx2gene (mm10, gencode) list if not specified explicitely:
   TX2Gene <- fread(Tx2Gene, header = F, data.table = F, sep = "\t")
   
-  SmallRNAFile <- fread(SmallRNAFile, header = F, data.table = F, sep = "\t")
+  if (FilterSmallRNAs){
+    SmallRNAFile <- fread(SmallRNAFile, header = F, data.table = F, sep = "\t")
+  }
   
   
   ## List quantification files:
@@ -147,7 +149,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   ####################################################################################################################################################
   
   ## Filter smallRNAs as in standard RNA-seq they probably represent artifacts and are not reliable (size selection 200bp during lib. prep):
-  if (FilterSmallRNAs == T){
+  if (FilterSmallRNAs){
     message("Removing smallRNAs is set to TRUE")
     ## keep non-smallRNAs:
     keep <- !(rownames(txi$counts) %in% SmallRNAFile[,1])
@@ -164,7 +166,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   
   if(Only.tximport) return(txi)
   
-  if (Return.tximport == TRUE) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
+  if (Return.tximport) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
   
   ####################################################################################################################################################
   
@@ -426,7 +428,7 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
     if (!dir.exists("./R")) dir.create("./R")
     save.image(paste0("./R/", GetDate(), "_", Save.ImageName, ".Rdata"))
   }
-
+  
 }
 
 ####################################################################################################################################################
