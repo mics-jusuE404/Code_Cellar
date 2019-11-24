@@ -11,8 +11,8 @@
 ## DE tables (topTags) will be written to disk plus will make MA-plots with significant regions colored in red.
 ##
 ## Depends on 
-## csaw (CPM calculations), 
-## edgeR (differential testing), 
+## csaw (CPM calculations, most code and parameters for differential testing), 
+## edgeR (differential testing functions), 
 ## DESeq2 (plotPCA function) 
 ## statmod (not exactly sure what this is but edgeR needs it for something...)
 ##
