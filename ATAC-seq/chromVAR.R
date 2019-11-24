@@ -1,7 +1,8 @@
 #!/home/a/a_toen03/anaconda3/bin/Rscript
 
 ## Basic wrapper script to run chromVAR on two-condition bulk ATAC-seq data, e.g. wildtype vs. knockout condition.
-## In line 58 one specifies the peak files and on line 
+## In line 58 one specifies the peak files and on line 61 one specified the BAM files to be used for count matrix creation.
+## 
 ##############################################################################################################################
 
 ## Packages:
