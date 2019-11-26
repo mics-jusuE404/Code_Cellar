@@ -1,15 +1,14 @@
-## Wrapper for differential analysis with edgeR downstream of tximport based on salmon quantifications.
+## Wrapper for differential analysis with edgeR downstream of timport from salmon quantifications.
 ## Expected naming convention is that the quantification folder (where quant.sf is in) suffixes with _salmon
-## and that replicates are indicated as *_repN_salmon
-
 GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
 
 salmon2edgeR <- function(Basename,                   ## Prefix for all elements saved to disk/envir
                          SalmonDir,                  ## the path to the folder with the salmon quantifications
                          WorkingDir = "./",          ## default working directory
                          Tx2Gene,                    ## the tab-delim list with transcript2gene conversions
+                         NoLengthOffsets = FALSE,    ## if TRUE do not use offsets for txlength correction (for 3'-enriched RNA-seq)
                          FilterSmallRNAs = TRUE ,    ## remove from tximport all smallRNAs as these are typically not well-captured
-                         SmallRNAFile,               ## the file that contains the genes to filter out
+                         SmallRNAFile = NULL,        ## the file that contains the genes to filter out
                          Save.RawDGElist = FALSE,    ## if TRUE saves the DGElist prior to all FilterByExpr etc
                          MakeMAplots = "groupwise",  ## one of c("all", "groupwise", "none") for explaroatory MA-plots
                          MakePCAplot = TRUE,         ## guess what
@@ -24,10 +23,10 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
                          Contrasts = NULL,           ## contrasts based on makeContrasts
                          Test.AnyDiff = NULL,        ## if TRUE use ANOVA-like test to detect any differences (manual edgeR 3.2.6)
                          Thresh.glmTreat = NULL,     ## fold change to test against as null hypothesis     
-                         FilterByExpr = TRUE,        ## whether or not to use that filter from edgeR
-                         Save.ImageName = NULL       ## if not null, save image to that file in the format ./R/GetDate()_<name>.Rdata
-                         
+                         FilterByExpr = TRUE         ## whether or not to use that filter from edgeR
 ){
+  
+  GetDate <- function(){ gsub("^20", "", format(Sys.Date(), "%Y%m%d")) }
   
   ####################################################################################################################################################
   
@@ -119,10 +118,8 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   ## Use the default tx2gene (mm10, gencode) list if not specified explicitely:
   TX2Gene <- fread(Tx2Gene, header = F, data.table = F, sep = "\t")
   
-  if (FilterSmallRNAs){
-    SmallRNAFile <- fread(SmallRNAFile, header = F, data.table = F, sep = "\t")
-  }
-  
+  ## read file to filter out small RNAs as they are typically not meaningful in standard RNA-seq:
+  if (!is.null(SmallRNAFile)) SmallRNAFile <- fread(SmallRNAFile, header = F, data.table = F, sep = "\t")
   
   ## List quantification files:
   tmp.files <- list.files(path = list.dirs(path = SalmonDir, recursive=FALSE, full.names = T), 
@@ -144,11 +141,12 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   ####################################################################################################################################################
   
   ## Aggregate transcript level estimates to the gene level using tximport:
-  txi <- tximport(files = tmp.files, type = "salmon", txIn = T, txOut = F, tx2gene = TX2Gene)
+  txi <- tximport(files = tmp.files, type = "salmon", txIn = TRUE, txOut = FALSE, tx2gene = TX2Gene)
   
   ####################################################################################################################################################
   
-  ## Filter smallRNAs as in standard RNA-seq they probably represent artifacts and are not reliable (size selection 200bp during lib. prep):
+  ## Filter smallRNAs as in standard RNA-seq they are typically (imho) not meaningful and only inflate multiple testing burden:
+  if (is.null(SmallRNAFile)) FilterSmallRNAs <- FALSE ## if no filter file given skip the filtering automatically
   if (FilterSmallRNAs){
     message("Removing smallRNAs is set to TRUE")
     ## keep non-smallRNAs:
@@ -166,33 +164,46 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   
   if(Only.tximport) return(txi)
   
-  if (Return.tximport) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
+  if (Return.tximport == TRUE) assign(paste(Basename, ".tximport", sep=""), txi, envir = .GlobalEnv)
   
   ####################################################################################################################################################
   
-  ## Calculate normalized counts corrected with the offsets from tximport for length, 
-  ## see => https://support.bioconductor.org/p/121087/ for details.
-  message("Calculating offsets from tximport")
+  #### Create DGElist and calculate/export CPMs (see https://support.bioconductor.org/p/121087/ for details)
+  
+  ## Prepare DGElist:
   cts <- txi$counts
-  normMat <- txi$length
-  normMat <- normMat/exp(rowMeans(log(normMat)))
-  o <- log(calcNormFactors(cts/normMat)) + log(colSums(cts/normMat))
   y <- DGEList(cts)
-  ## y would now be ready for filterByExpr() followed by dispersion estimation
-  y <- scaleOffset(y, t(t(log(normMat)) + o)) 
+  if (Save.RawDGElist) assign(paste0(Basename, "_raw.DGElist"), y, envir = .GlobalEnv)
   
-  ## if T save the DGElist prior to any further filtering:
-  if (Save.RawDGElist == TRUE) assign(paste0(Basename, "_raw.DGElist"), y, envir = .GlobalEnv)
+  ## IF) standard RNA-seq calculate offsets to correct tx length bias:
+  if (NoLengthOffsets == FALSE){ 
+    
+    message("Normalizing counts and calculating tx length-bias offsets")
+    normMat <- txi$length
+    normMat <- normMat/exp(rowMeans(log(normMat)))
+    o <- log(calcNormFactors(cts/normMat)) + log(colSums(cts/normMat))
+    y <- scaleOffset(y, t(t(log(normMat)) + o)) ## now ready for dispersion estimation
+    Use.Offsets <- TRUE
+  }
   
-  ## export CPMs:
+  ## ELSE) for 3'-enriched libraries where one expects no lengths bias use no length correction:
+  if(NoLengthOffsets){
+    
+    message("Normalizing counts")
+    y <- calcNormFactors(y) ## now ready for dispersion estimation
+    Use.Offsets <- FALSE
+    
+  }
+  
+  ## Calculate CPMs:
   message("Saving offset-corrected CPMs")
   se <- SummarizedExperiment(assays = y$counts)
   names(assays(se))[1] <- "counts"
   se$totals <- y$samples$lib.size
   assay(se, "offset") <- y$offset
-  se.cpm <- calculateCPM(se, use.norm.factors = FALSE, use.offsets = TRUE, log = FALSE)
-  
-  ## To envir and disk:
+  se.cpm <- calculateCPM(se, use.norm.factors = !Use.Offsets, use.offsets = Use.Offsets, log = FALSE)
+
+  ## To environment and to disk:
   assign(x = paste(Basename, "_CPM.df", sep=""), value = data.frame(se.cpm), envir = .GlobalEnv)
   
   if (!dir.exists("./Lists")) dir.create("./Lists")
@@ -424,13 +435,6 @@ salmon2edgeR <- function(Basename,                   ## Prefix for all elements 
   
   assign(paste0(Basename, "_final.DGElist"), y, envir = .GlobalEnv)
   
-  if (!is.null(Save.ImageName)){
-    if (!dir.exists("./R")) dir.create("./R")
-    save.image(paste0("./R/", GetDate(), "_", Save.ImageName, ".Rdata"))
-  }
-  
 }
 
-####################################################################################################################################################
-
-
+## //END// ##
