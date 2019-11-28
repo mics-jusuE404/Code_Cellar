@@ -137,7 +137,7 @@ if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0
 
 function SALMON {
   
-  SalmonBasic="salmon quant -l ${LibType} -i ${Idx} -p ${Threads} --validateMappings --seqBias --writeUnmappedNames --no-version-check"
+  SalmonBasic="salmon quant -l ${LibType} -i ${Idx} -p ${Threads} --validateMappings --writeUnmappedNames --no-version-check"
   
   (>&2 paste -d " " <(echo '[INFO]' 'Running salmon for' "${1}" 'in' ${Mode} 'mode -- started on') <(date))
   
@@ -152,7 +152,7 @@ function SALMON {
     
     ## standard full-length RNA-seq:
     if [[ "${NoLength}" == "FALSE" ]]; then
-      eval "${SalmonBasic}" --gcBias -o ${1}_salmon -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
+      eval "${SalmonBasic}" --seqBias --gcBias -o ${1}_salmon -1 ${1}_1.fastq.gz -2 ${1}_2.fastq.gz
     fi  
     
     ## 3'-enriched libraries so no length correction:
@@ -171,7 +171,7 @@ function SALMON {
     
     ## standard full-length RNA-seq:
     if [[ "${NoLength}" == "FALSE" ]]; then
-      eval "${SalmonBasic}" -o ${1}_salmon -r ${1}.fastq.gz
+      eval "${SalmonBasic}" --seqBias -o ${1}_salmon -r ${1}.fastq.gz
     fi  
     
     ## 3'-enriched libraries so no length correction:
