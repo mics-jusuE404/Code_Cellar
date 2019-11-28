@@ -144,8 +144,6 @@ function SALMON {
   ## Paired-End run:              
   if [[ ${Mode} == "paired" ]]; then
   
-    echo "Check2" ${1}
-    
     if [[ ! -e ${1}_1.fastq.gz || ! -e ${1}_2.fastq.gz ]]; then
     echo '[ERROR]: At least on of the input files is missing for' $1 && exit 1
     fi
