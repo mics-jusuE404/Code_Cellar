@@ -1,5 +1,7 @@
 #!/bin/bash
 
+## This is for the non-pufferfish indeced versions!!! Deprecated
+
 #######
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=72
