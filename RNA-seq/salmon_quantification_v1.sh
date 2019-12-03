@@ -137,7 +137,7 @@ if [[ -e missing_tools.txt ]] && [[ $(cat missing_tools.txt | wc -l | xargs) > 0
 
 function SALMON {
   
-  SalmonBasic="salmon quant -l ${LibType} -i ${Idx} -p ${Threads} --validateMappings --writeUnmappedNames --no-version-check"
+  SalmonBasic="salmon quant -l ${LibType} -i ${Idx} -p ${Threads} --validateMappings --no-version-check"
   
   (>&2 paste -d " " <(echo '[INFO]' 'Running salmon for' "${1}" 'in' ${Mode} 'mode -- started on') <(date))
   
